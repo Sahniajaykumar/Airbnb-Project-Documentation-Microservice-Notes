@@ -233,3 +233,62 @@ Step 5 : Backend microservices should also verify the token or trust signed user
 
 ===============================================================================================================
 
+Next Microservice-2 Project :
+
+Step 1 : create Microservice-2 project using following these dependency : 
+
+1. Spring Web
+2. Spring Security
+3. Eureka Discovery Client
+4. OpenFeign Client
+5. DevTools
+6. <!-- Auth0 JWT -->
+    <dependency>
+        <groupId>com.auth0</groupId>
+        <artifactId>java-jwt</artifactId>
+        <version>4.4.0</version>
+    </dependency>
+
+Step 2: Enable @EnableDiscoveryClient in main class of Microservice-2 project
+
+Step 3 : After create WelcomeControllerApi for testing api inside controller pacage 
+
+package com.microservice2.controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class WelcomeControllerApi {
+	
+	@GetMapping("/message")
+	public String getMessage() {
+		return "welcome ajay bhai from microservice-2";
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

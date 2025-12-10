@@ -31,7 +31,25 @@ eureka.client.service-url.defaultZone=http://localhost:8761/eureka
 
 ---------------------------------------------------------------------------------------------------------------
 Create API Gateway project for JWL Filterization : add routing  in YML file 
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+1. First remove JWTFilter class from configuration file and modify security filter chain because i am not filtering JWT in config file 
+2. I will filter the jwt token in API Gateway class 
+ // ====================================
+ // 3. Security Filter Chain Configuration
+ // ====================================
+    
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
+        http.csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> {
+                auth.requestMatchers(OPEN_URLS).permitAll()
+                    .anyRequest().permitAll(); // AuthService doesn’t validate JWT now
+            });
+
+        return http.build();
+    }
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 Step 1: Inject this JWT library dependency in pom.xml file 
 --------------------------------------------------------------------
    <dependency>
@@ -196,7 +214,7 @@ _________________________________________________
 
 (b) login : POST : http://localhost:5555/auth/api/v1/auth/login , you will get JWT token after copy and
 
-past in authorization header : GET : http://localhost:5555/auth/api/v1/auth/login , you will get welcome ajay
+past in authorization header to access protected URL : GET : http://localhost:8083/api/v1/welcome/message , you will get welcome ajay
 
 Q: How do you secure a microservices project (very important)?
 ---------------------------------------------------------------

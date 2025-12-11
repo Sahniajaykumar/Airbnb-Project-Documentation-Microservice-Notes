@@ -265,10 +265,383 @@ public class WelcomeControllerApi {
 		return "welcome ajay bhai from microservice-2";
 	}
 }
+Step 4 : Now go to ApI Gateway(auth-service(microservice-1)) and do the configuration for microservice-2 in YML file 
+
+server:
+  port: 5555
+  
+spring:
+  application:
+    name: api-gateway-1
+
+  cloud:
+    gateway:
+      routes:
+
+        # Route for microservice-1
+        - id: authservice-api-1
+          uri: lb://AUTH-SERVICE
+          predicates:
+            - Path=/auth/**
+          filters:
+            - RewritePath=/auth/(?<segment>.*), /${segment}
+
+        # Route for microservice-2
+        - id: microservice-api-2
+          uri: lb://MICROSERVICE-2
+          predicates:
+            - Path=/micro2/**
+          filters:
+            - RewritePath=/micro2/(?<segment>.*), /${segment}
+
+step 5 : change the port name in application.propertise file(microservice-2)
+
+step 6 : now create AppSecurityConfig class(config pacage) and write this 
+
+package com.microservice2.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import com.microservice2.filter.JwtFilter;
+
+@Configuration
+@EnableWebSecurity
+public class AppSecurityConfig {
+	
+	 @Autowired
+	    private JwtFilter jwtFilter;
+
+	    String[] publicEndpoints = {
+	        "/v3/api-docs/**",
+	        "/swagger-ui/**",
+	        "/swagger-ui.html",
+	        "/swagger-resources/**",
+	        "/webjars/**",
+	        "/actuator/**", 
+	        "/eureka/**"
+	    };
+
+	    @Bean
+	    public PasswordEncoder getEncoder() {
+	        return new BCryptPasswordEncoder();
+	    }
+
+	    @Bean
+	    public SecurityFilterChain securityConfig(HttpSecurity http) throws Exception {
+
+	        http.csrf(csrf -> csrf.disable())
+	            .authorizeHttpRequests(req -> req
+	                    .requestMatchers(publicEndpoints).permitAll()
+	                    .anyRequest().authenticated()
+	            )
+	            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+
+	        return http.build();
+	    }
+
+}
+Step 7 : now create a User DTO class (dto package) 
+
+package com.microservice2.dto;
+
+public class User {
+	
+	private long id;
+	
+	private String name;
+	
+	private String username;
+	
+    private String email;
+	
+	private String password;
+	
+	private String role;
+	
+	
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getUsername() {
+		return username;
+	}
+
+	public void setUsername(String username) {
+		this.username = username;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	public String getRole() {
+		return role;
+	}
+
+	public void setRole(String role) {
+		this.role = role;
+	}
+}
+Step 8 : Now create JwtFilter class and JwtService class(inside filter pacage) for filterization not for createing JWT token 
+JwtFilter.class : 
+-------------------
+package com.microservice2.filter;
+
+import java.io.IOException;
+import java.util.Collections;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.microservice2.client.AuthServiceFeignClient;
+import com.microservice2.dto.User;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+@Component
+public class JwtFilter extends OncePerRequestFilter {
+	
+	 @Autowired
+	    private JwtService jwtService;
+	    
+	    @Autowired
+	    private AuthServiceFeignClient authServiceFeignClient;
+	    
+
+	@Override
+	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+			throws ServletException, IOException {
+		
+		
+		String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String jwt = authHeader.substring(7);
+            String username = jwtService.validateTokenAndRetrieveSubject(jwt);
+
+            User user = authServiceFeignClient.getUserByUsername(username,authHeader);
+                   
+            
+                var authToken = new UsernamePasswordAuthenticationToken(
+                		user, null, Collections.singleton(new SimpleGrantedAuthority(user.getRole())));
+
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
+       
+        filterChain.doFilter(request, response);
+				
+	}
+}
+
+JwtService.class for logic(like token validation not creating)
+------------------------------
+package com.microservice2.filter;
+
+import org.springframework.stereotype.Service;
+
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+
+@Service
+public class JwtService {
+	
+	private static final String SECRET_KEY = "my-super-secret-key";
+   // private static final long EXPIRATION_TIME = 86400000; // 1 day
+
+//    public String generateToken(String username, String role) {
+//        return JWT.create()
+//            .withSubject(username)
+//            .withClaim("role", role)
+//            .withIssuedAt(new Date())
+//            .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+//            .sign(Algorithm.HMAC256(SECRET_KEY));
+//    }
+
+    public String validateTokenAndRetrieveSubject(String token) {
+        return JWT.require(Algorithm.HMAC256(SECRET_KEY))
+            .build()
+            .verify(token)
+            .getSubject();
+    }
+}
+
+Step 8 : Now create AuthServiceFeignClient interface for microservice communication and enable FeignClient using @EnableFeignClients in Main class 
+
+package com.microservice2.client;
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import com.microservice2.dto.User;
+
+@FeignClient(name = "AUTH-SERVICE")
+public interface AuthServiceFeignClient {
+	
+	@GetMapping("/api/v1/auth/get-user") 
+    User getUserByUsername(@RequestParam("username") String username, @RequestHeader("Authorization") String token);
+
+}
+
+Step 9 : Now go to Auth-service(microservice-1) and write this logic 
+
+@GetMapping("/get-user")
+	 public User getUserByUserName(@RequestParam String username) {
+		 
+		 User user = userRepository.findByUsername(username);
+		 return user;		 
+	 }
 
 
+Step 10 : Now put the URL of microservice-2 in main gateway(api-gateway/JwtAuthenticationFilter) 
+
+"/micro2/message", List.of("ROLE_ADMIN") --> only this so that only ROle_Admin can access this URL not Not Role_User
+-------------------------------------------
+
+package com.apigateway.filter;
+
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.core.Ordered;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
+
+import reactor.core.publisher.Mono;
+
+@Component // which ever URL will come with token first come to this class for verification
+public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
+	
+	 private static final String SECRET_KEY = "my-super-secret-key"; // should match signature
+
+	    private static final List<String> openApiEndpoints = List.of( // open URL
+	            "/auth/api/v1/auth/login",
+	            "/auth/api/v1/auth/register"
+	    );
+
+	    private static final Map<String, List<String>> protectedEndpointsWithRoles = Map.of(
+	    	    //"/auth/api/v1/welcome/message", List.of("ROLE_ADMIN"), // protected URL/auth written from api-gateway-1 YML file
+	    	    "/micro2/message", List.of("ROLE_ADMIN")   // modified            // protected URL/micro2 written from api-gateway-1 YML file
+	    	);
 
 
+	    @Override
+	    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+	        String requestPath = exchange.getRequest().getURI().getPath();
+
+	        // Allow public ENDPOINTS 
+	        if (isPublicEndpoint(requestPath)) {
+	            return chain.filter(exchange);
+	        }
+
+	        String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
+	        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+	            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+	            return exchange.getResponse().setComplete();
+	        }
+
+	        String token = authHeader.substring(7);
+
+	        try {
+	            DecodedJWT jwt = JWT.require(Algorithm.HMAC256(SECRET_KEY))
+	                    .build()
+	                    .verify(token);
+
+	            String role = jwt.getClaim("role").asString();
+
+	            System.out.println("Request path: " + requestPath);
+	            System.out.println("Role from token: " + role);
+
+	            if (!isAuthorized(requestPath, role)) {
+	                exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
+	                return exchange.getResponse().setComplete();
+	            }
+
+	            // Pass role to downstream services (optional)
+	            exchange = exchange.mutate()
+	                    .request(r -> r.header("X-User-Role", role))
+	                    .build();
+
+	        } catch (JWTVerificationException e) {
+	            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+	            return exchange.getResponse().setComplete();
+	        }
+
+	        return chain.filter(exchange);
+	    }
+
+	    private boolean isPublicEndpoint(String path) {
+	        return openApiEndpoints.stream().anyMatch(path::equalsIgnoreCase);
+	    }
+
+	    private boolean isAuthorized(String path, String role) {
+	        for (Map.Entry<String, List<String>> entry : protectedEndpointsWithRoles.entrySet()) {
+	            String protectedPath = entry.getKey();
+	            List<String> allowedRoles = entry.getValue();
+
+	            if (path.startsWith(protectedPath)) {
+	                System.out.println("Matched protected path: " + protectedPath + " | Allowed roles: " + allowedRoles);
+	                return allowedRoles.contains(role);
+	            }
+	        }
+	        return true; // Allow access if path is not protected (can be changed to false to deny by default)
+	    }
+
+	    @Override
+	    public int getOrder() {
+	        return -1;
+	    }
+	}
 
 
 

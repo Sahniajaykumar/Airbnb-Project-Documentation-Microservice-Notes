@@ -643,6 +643,13 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 	    }
 	}
 
+Note : Follow the link for login and access the microservice protected URL : 
+
+login as a admin : Post : http://localhost:5555/auth/api/v1/auth/login
+
+access protected url GET : http://localhost:5555/micro2/message  // only Roles_Admin can access this url not Roles_User be focus 
+
+
 
 
 

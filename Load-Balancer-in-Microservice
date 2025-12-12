@@ -1,0 +1,313 @@
+
+######################################################################################################################
+🌀 What is Load Balancing in Microservices?
+#######################################################################################################################
+
+Load Balancing means:
+
+Load balanced helps to Distribute incoming requests across multiple instances of the same microservice so no single instance is overloaded.
+
+Example:
+You have 3 instances of ORDER-SERVICE:
+
+ORDER-SERVICE-1 → port 9001
+ORDER-SERVICE-2 → port 9002
+ORDER-SERVICE-3 → port 9003
+
+
+When a client sends 10,000 requests → the load balancer divides the traffic across all 3, preventing overload.
+
+This improves:
+
+⚡ Speed
+
+🔁 Reliability
+
+🛡 Availability
+
+🚀 Scalability
+
+🧱 Why Load Balancer Is Needed in Microservices?
+
+In monolithic apps, only one application instance is running.
+But in microservices, each service:
+
+✔ can run multiple instances
+✔ can run on different servers/ports
+✔ can be killed/restarted anytime
+✔ can scale automatically
+
+That means:
+
+➡ Clients cannot directly call a fixed URL like
+http://localhost:9001/orders
+Because this instance may be DOWN or overloaded.
+
+So we need a smart component which always knows:
+
+which instances are UP
+
+which instances are down
+
+how many instances exist
+
+distribute load among them
+
+That component = Load Balancer
+
+🔥 Two Types of Load Balancing in Microservices
+
+There are two main types:
+
+1️⃣ Client-Side Load Balancing (Common in Spring Boot)
+
+Client decides which instance to call.
+
+Flow:
+
+Client gets service instances from Service Registry (Eureka)
+
+Client picks one instance using a load-balancing algorithm
+
+Client sends the request directly to that instance
+
+🔥 Used in:
+
+Spring Cloud + Eureka + Feign
+
+Ribbon (old)
+
+Spring Cloud LoadBalancer (new, recommended)
+
+Example (Spring Cloud LoadBalancer)
+
+You call:
+
+http://ORDER-SERVICE/api/orders
+
+
+The client (Feign / RestTemplate) will:
+
+Ask Eureka:
+“Give me all instances of ORDER-SERVICE”
+
+Eureka returns:
+
+http://localhost:9001
+
+http://localhost:9002
+
+http://localhost:9003
+
+LoadBalancer picks one instance
+
+Request goes there
+
+Default algorithm:
+
+✔ Round Robin
+
+2️⃣ Server-Side Load Balancing (Used in API Gateway, Nginx, AWS ELB)
+
+Here, the server decides where to send the request.
+
+The client hits only one URL:
+
+http://api-gateway/orders
+
+
+The API Gateway:
+
+Forwards to ORDER-SERVICE-1
+
+Or ORDER-SERVICE-2
+
+Or ORDER-SERVICE-3
+
+🔥 Used in:
+
+Spring Cloud Gateway
+
+Netflix Zuul
+
+Nginx
+
+AWS Elastic Load Balancer
+
+Google Cloud Load Balancer
+
+🏗 Full Architecture (Spring Boot + Eureka + Gateway + Load Balancer)
+              CLIENT
+                 |
+          API GATEWAY (Server-side Load Balancer)
+                 |
+        --------------------------
+        |           |            |
+ ORDER-SERVICE-1  -2           -3
+ (port 9001)     (9002)       (9003)
+
+
+Inside microservices:
+
+Feign also uses Client-side load balancing
+to call other services.
+
+So microservices use both types simultaneously.
+
+🧠 How Load Balancing Works Internally (Deep Concept)
+
+When a request comes:
+
+1️⃣ Service Registry (Eureka) keeps a list of all instances:
+Health checks every few seconds.
+
+2️⃣ Load Balancer pulls this list from Eureka and stores in memory.
+
+3️⃣ Load Balancer applies an algorithm:
+
+🍥 Common Algorithms:
+| Algorithm                | Explanation                                     |
+| ------------------------ | ----------------------------------------------- |
+| **Round Robin**          | Rotate requests evenly to each instance         |
+| **Random**               | Pick random instance                            |
+| **Weighted Round Robin** | Assign higher load to powerful servers          |
+| **Least Connections**    | Server with fewer connections gets next request |
+| **Response Time Based**  | Pick instance responding fastest                |
+| **Zone-Aware LB**        | Prefer nearby instances (AWS zones)             |
+
+
+
+Default in Spring Cloud LoadBalancer = Round Robin.
+
+🧨 What If One Instance Goes Down?
+
+Example: ORDER-SERVICE-2 crashes.
+
+Eureka marks it as DOWN
+
+Load Balancer removes it from the list
+
+All requests go to remaining instances
+(ORDER-SERVICE-1 & ORDER-SERVICE-3)
+
+➡ System continues without downtime
+➡ Self-healing architecture
+
+🏎 What If Traffic Increases Suddenly?
+
+Example: Sale day → traffic increases x5.
+
+Auto-scaling system (Kubernetes/ECS) creates more instances:
+
+ORDER-SERVICE-4
+ORDER-SERVICE-5
+
+
+Eureka adds them automatically.
+Load Balancer starts sending traffic to them.
+
+➡ System scales automatically
+➡ No configuration change needed
+
+🛡 Load Balancer + Resilience4J (Fault Tolerance)
+
+Load balancer works with:
+
+Retry
+
+Circuit Breaker
+
+Rate Limiter
+
+Bulkhead
+
+If one instance becomes slow, Circuit Breaker trips and LB stops sending traffic to it.
+
+🔥 Practical Example in Spring Boot (Feign)
+@FeignClient(name = "ORDER-SERVICE")
+public interface OrderClient {
+    @GetMapping("/orders")
+    String getOrders();
+}
+
+
+When you call getOrders():
+
+LB picks an ORDER-SERVICE instance
+
+Sends the request there
+
+No need to write logic manually.
+
+#######################################################################################################################
+Q: What's Difference Between Rest Template, Webclient & Feign client
+########################################################################################################################
+
+| Feature            | RestTemplate              | WebClient                              | Feign Client                                  |
+| ------------------ | ------------------------- | -------------------------------------- | --------------------------------------------- |
+| **Type**           | Synchronous (Blocking)    | Asynchronous + Non-blocking (Reactive) | Declarative HTTP Client                       |
+| **Spring Version** | Spring 3                  | Spring 5 (WebFlux)                     | Spring Cloud                                  |
+| **Performance**    | Low (blocks thread)       | High (non-blocking)                    | Medium–High                                   |
+| **Use Case**       | Simple calls, legacy apps | High load, reactive apps               | Microservice-to-microservice calls            |
+| **Eureka Support** | ❌ (manual implementation)| ❌ (needs LoadBalancer)               | ✅ Built-in (via service name)                |
+| **Load Balancing** | ❌                        | ❌                                    | ✅ Automatically via Spring Cloud LoadBalancer|
+| **Code Style**     | Verbose                   | Complex (reactive)                     | Very clean & declarative                      |
+| **Recommended**    | ❌ Deprecated             | ✔ Modern apps                         | ✔ Microservices                               |
+| **Parallel Calls** | Hard                      | Easy (reactive stream)                 | Easy with multiple interfaces                 |
+| **Error Handling** | Manual                    | Advanced reactive                      | Auto with Feign + Resilience4J                |
+
+
+🟥 3. Top Interview Questions & Answers
+Q1. What is the difference between RestTemplate, WebClient, and Feign Client?
+
+Answer (short):
+RestTemplate is synchronous and blocking.
+WebClient is asynchronous and non-blocking.
+Feign Client is declarative and best for microservice-to-microservice communication.
+
+Q2. Why is RestTemplate deprecated?
+
+Answer:
+Because it uses a blocking model that cannot handle high concurrency efficiently.
+Spring recommends WebClient as the modern alternative.
+
+Q3. Why is Feign Client preferred in microservices?
+
+Answer:
+Because it:
+
+Supports service discovery (Eureka)
+
+Provides automatic load balancing
+
+Has clean, declarative code
+
+Integrates with Resilience4J for retries, fallback, circuit breaker
+
+Q4. When should we use WebClient instead of Feign?
+
+Answer:
+Use WebClient when you need:
+
+Non-blocking calls
+
+High performance
+
+Streaming data
+
+Reactive programming
+
+Q5. Why is WebClient faster than RestTemplate?
+
+Answer:
+Because WebClient uses non-blocking I/O, allowing a small number of threads to handle thousands of requests.
+
+Q6. Can Feign Client make asynchronous calls?
+
+Answer:
+Yes (using CompletableFuture), but it is primarily designed for simple, synchronous declarative calls.
+
+Q7. Which one supports load balancing by default?
+
+Answer:
+Feign Client (via Spring Cloud LoadBalancer).

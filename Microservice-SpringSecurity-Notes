@@ -1,0 +1,2407 @@
+
+
+🌐 What are Microservices?
+################################
+Microservices is an architecture style where an application is broken down into small, independent services that communicate over a network (usually HTTP). Each service focuses on a single business function, is independently deployable, and can be developed, scaled, and maintained separately.
+
+
+🚀 Why Use Spring Boot for Microservices?
+###########################################
+Spring Boot provides all the necessary tools and integrations (e.g., REST APIs, Eureka, Config Server, etc.) to build robust, production-ready microservices quickly.
+
+✅ Benefits of Microservices with Spring Boot:
+##############################################
+1. Loose coupling between services
+2. Independent deployment and scaling
+3. Technology flexibility (each microservice can use different tech)
+4. Easier debugging, testing, and maintenance
+5. Faster time-to-market
+
+
+🔧 What is a Service Registry in Microservices?
+#####################################################
+A Service Registry is a central directory where all microservices register themselves so they can be discovered and communicate with each other without hardcoding IPs or URLs.
+
+In Spring Boot, the most common Service Registry is Eureka Server (from Netflix OSS).
+
+Note: 
+-> Eureka server runs by default on port 8761.
+-> If you run eureka server on port 8761. Client (micro services will automatically register with eureka server)
+
+Steps to Create Eureka Server / Service Registry
+###################################################
+
+==============================================================
+| Step | Description                                          |
+==============================================================
+| 1    | Create Eureka Server (Service Registry)              |
+--------------------------------------------------------------
+|      | a) Create a Spring Boot project                      |
+|      | b) Add dependency: 'spring-cloud-starter-netflix-eureka-server' | Dev tool Dependencies
+|      | c) Add @EnableEurekaServer in main class             |
+|      | d) Configure application.properties:                 |
+|         server.port=8761                                    |
+|         eureka.client.register-with-eureka=false            |
+|         eureka.client.fetch-registry=false  
+Note: 
+This tells the Eureka Server:
+Don't register itself as a client.
+Don't try to fetch registry data (because it's the registry).                |
+--------------------------------------------------------------
+| 2    | Run Eureka Server                                    |
+|      | Access: http://localhost:8761                        |
+==============================================================
+
+
+
+#############################################
+🛠️ What is Spring Boot Admin Server?
+#############################################
+
+Spring Boot Admin Server is a web-based UI dashboard that lets you monitor and manage Spring Boot applications in real time. It provides insight into application health, metrics, environment, thread dumps, and more — all using Spring Boot Actuator endpoints under the hood.
+
+✅ Key Features of Spring Boot Admin:
+-> Real-time health status of services
+-> Memory, thread, and CPU usage
+-> View logs, environment properties, and actuator endpoints
+-> Email/Slack notifications for service status
+-> UI-based access to /actuator endpoints
+
+📋 How It Works:
+-------------------
+a. You create a Spring Boot Admin Server (dashboard).
+b. Other Spring Boot apps register as Admin Clients.
+c. The Admin Server shows their status and health metrics.
+
+📌 Summary:
+Use Actuator to make your app observable.
+Use Admin Server to see all your services and their health in one place.
+
+#############################
+📜 Step-by-Step Instructions:
+#############################
+1. Set Up Spring Boot Admin Server:
+-> Create a Spring Boot Project for the Admin Server.
+
+-> You can use Spring Initializr or your IDE to create a new Spring Boot project.
+
+-> Add Dependencies to your pom.xml:
+
+<dependency>
+  <groupId>de.codecentric</groupId>
+  <artifactId>spring-boot-admin-starter-server</artifactId>
+</dependency>
+<dependency>
+  <groupId>org.springframework.boot</groupId>
+  <artifactId>spring-boot-starter-web</artifactId>
+</dependency>
+
+----------------------------------------------------------------------------------
+Enable Admin Server by adding @EnableAdminServer annotation to your main class:
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import de.codecentric.boot.admin.server.config.EnableAdminServer;
+
+@SpringBootApplication
+@EnableAdminServer
+public class AdminServerApplication {
+  public static void main(String[] args) {
+    SpringApplication.run(AdminServerApplication.class, args);
+  }
+}
+--------------------------------------------------------------------------------
+Configure application.properties for Admin Server:
+
+server.port=8080  # Admin Server running on port 8080
+spring.boot.admin.ui.title=Spring Boot Admin Server  # Custom title
+
+------------------------------------------------------------------------------
+
+##############################
+📡 What is Zipkin Server?
+###############################
+Zipkin Server is a distributed tracing system that helps you trace and visualize the flow of requests across multiple microservices. It shows you how long each service call takes and helps diagnose latency issues or failures in a microservices architecture.
+
+✅ Key Features of Zipkin:
+----------------------------
+-> Tracks request paths across microservices (traceId)
+-> Shows latency and response time of each service
+-> Helps identify bottlenecks or failures
+-> Integrates with Spring Cloud Sleuth for automatic tracing
+
+Step to Install Zipikin Server:
+
+1. Download Zipkin Servers: https://zipkin.io/pages/quickstart
+2. To run jar file : java -jar file-name
+3. Access that on port 9411
+
+
+
+#############################################
+First Microservices App
+############################################
+
+1. Create Spring Boot With following dependency
+
+==================================================================================================================
+| Dependency Name               | Maven Artifact ID                      | Purpose                             |
+==================================================================================================================
+| Eureka Discovery Client       | spring-cloud-starter-netflix-eureka-client | Registers service in Eureka     |
+| Spring Boot Admin Client     | spring-boot-admin-starter-client       | Sends monitoring data to Admin UI   |
+| Spring Web                   | spring-boot-starter-web                | Enables REST API support             |
+| DevTools                     | spring-boot-devtools                   | Enables auto-restart and live reload|
+| Spring Actuator              | spring-boot-starter-actuator           | Exposes health/metrics endpoints     |
+| Zipkin Tracing               | spring-cloud-starter-zipkin            | Sends tracing data to Zipkin         |
+| Sleuth (auto tracing)        | spring-cloud-starter-sleuth            | Generates trace & span IDs           |
+==================================================================================================================
+
+Step 2: Annotate the Main Class with @EnableDiscoveryClient
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
+
+@SpringBootApplication
+@EnableDiscoveryClient
+public class MyServiceApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(MyServiceApplication.class, args);
+    }
+}
+
+
+Step 3: Configure application.properties file or application.yml file 
+
+# Basic Info
+spring.application.name=microservice-1
+server.port=8081
+
+# Eureka - Optional if you are running eureka on port 8671
+eureka.client.service-url.defaultZone=http://localhost:8761/eureka
+
+# Admin Server
+spring.boot.admin.client.url=http://localhost:8080
+management.endpoints.web.exposure.include=*
+
+# Zipkin - Optional to mention. It will register with ZIPKIN Automatically
+management.tracing.sampling.probability=1.0
+management.zipkin.tracing.endpoint=http://localhost:9411/api/v2/spans
+
+
+Step 4: build a dumy controller class to check whether you microservice-1 is register or not with Eureka , Admin , Zipkin server.
+
+package com.microservice_1;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class FirstController {
+	
+	@GetMapping("/message")
+	public String getMessage() {
+		return "From Microservice-1";
+	}
+
+}
+
+1. TO access microservice-1,  go to Eureka server and click on your microservice-1 which is register in Eureka server and copy the link and paste in browser : http://desktop-7o9mkfp:8081/message (this is dumy link not original )
+2. If you don't want to access microservice-1 application through this url,  then use  " Open Feign Client "  which is used to access the microservice application based on their name itself .
+3. @EnableFeignClients also allows a microservice to communicate with other microservices by enabling Feign client interfaces.
+--------------------------------------------------------------------------------------------------------------------------
+Note : Keep only one configuration file in your one project, application.propertise or application.yml file among of both .
+--------------------------------------------------------------------------------------------------------------------------
+Very Important Note:
+##########################
+✅ Tools That Support Service Name Access via Eureka:
+
+Tool	      Can Use Service Name (e.g., MICROSERVICES-1)	       Requires Eureka + Config
+Feign Client	         ✅ Yes	                                        Built-in support (just use @FeignClient)
+RestTemplate	         ✅ Yes	                                        Requires @LoadBalanced on bean
+WebClient	         ✅ Yes	                                        Requires @LoadBalanced on WebClient builder
+Browser / Postman	 ❌ No	                                        Needs actual host URL like host.docker.internal
+
+So how to access application with Service name then? To do so, we have to use client like Feign, Webclient, RestTemplate.
+Seond These Clients provide load balancer concept. Our microservices will continue to run even when url changes as microservice are being accessed using microservice names from eureka server.
+
+
+Difference Between Rest Template, Webclient & Feign client
+##############################################################
+
+
+Feature                         | RestTemplate (with setup)  | WebClient (with setup)  | Feign Client (automatic)
+------------------------------- | -------------------------- | ----------------------- | --------------------------
+Can use microservice name       | Yes                        | Yes                     | Yes
+Requires manual configuration   | Yes (@LoadBalanced)        | Yes (@LoadBalanced)     | No
+Built-in load balancing         | Yes                        | Yes                     | Yes
+URL hardcoded by default        | Yes                        | Yes                     | No
+Effort level                    | Medium                     | Medium                  | Low
+
+
+Example:
+Tool            | Call Example                                                                     
+--------------- | --------------------------------------------------------------------------------
+RestTemplate    | restTemplate.getForObject("http://MICROSERVICES-1/api/data", String.class);   
+  
+WebClient       | webClient.get().uri("http://MICROSERVICES-1/api/data").retrieve().bodyToMono(); 
+
+Feign Client    | @FeignClient(name = "MICROSERVICES-1") 
+                  public interface Client { 
+                  @GetMapping("/api/data") String getData(); 
+                  }
+
+####################################################################################
+Create Micro service 2 - Use Inter microservices communication --> Use Feign Client
+####################################################################################
+
+Step 1: Create Micro Service 2 Spring boot project
+Step 2: Add Following Dependencies
+
+==================================================================================================================
+| Dependency Name               | Maven Artifact ID                      | Purpose                             |
+==================================================================================================================
+| Eureka Discovery Client       | spring-cloud-starter-netflix-eureka-client | Registers service in Eureka     |
+| Spring Boot Admin Client     | spring-boot-admin-starter-client       | Sends monitoring data to Admin UI   |
+| Spring Web                   | spring-boot-starter-web                | Enables REST API support             |
+| DevTools                     | spring-boot-devtools                   | Enables auto-restart and live reload|
+| Spring Actuator              | spring-boot-starter-actuator           | Exposes health/metrics endpoints     |
+| Zipkin Tracing               | spring-cloud-starter-zipkin            | Sends tracing data to Zipkin         |
+| Sleuth (auto tracing)        | spring-cloud-starter-sleuth            | Generates trace & span IDs           |
+| OpenFeign(Client)            | org.springframework.cloud              | Performs Communication with other microservice|
+==================================================================================================================
+
+Step 3: Create Fiegn Interface
+
+
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@FeignClient(name = "MICROSERVICES-1") 
+public interface Client {
+	
+	@GetMapping("/message")
+	public String getData();
+
+}
+
+Step 4: (Optional if you get an error creating Client bean, add the following to Main class )
+
+@SpringBootApplication
+@EnableFeignClients(basePackages = "com.microservice-2")
+public class Microservices2Application {
+
+	public static void main(String[] args) {
+		SpringApplication.run(Microservices3Application.class, args);
+	}
+
+}
+
+Step 5:
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class SecondController {
+	
+	@Autowired
+	private Client client;
+	
+	@GetMapping("/fromsecondcontroller")
+	public String getMessageFromMicroservices1() {
+		return client.getData();
+	}
+
+}
+Step 6: Add the following to yaml file: This is same just like microservice-1 configuration
+spring:
+  application:
+    name: microservices-3
+  boot:
+    admin:
+      client:
+        url: http://localhost:8080
+
+server:
+  port: 8085
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://localhost:9411/api/v2/spans
+
+Step 7: Test using this url: http://localhost:8085/fromsecondcontroller
+#########################################################################################################################
+
+
+
+#################################################
+Load Balancer Demonstration in microservices
+###################################################
+
+In microservice 1 remove port number and start the application on different port using Spring--> run configurations--->arguments---> -Dserver.port=8082 etc
+Feign Client automatically load balances requests via Ribbon
+
+Note :  This is just for your references to convert .propertise to .yml file , same just like microservice-1 
+# Basic Info
+spring.application.name=my-service
+#server.port=8081-------> just update the port number to access microservice-2 application , if port number is same in microservice-1 .
+
+# Eureka - Optional if you are running eureka on port 8671
+eureka.client.service-url.defaultZone=http://localhost:8761/eureka
+
+# Admin Server
+spring.boot.admin.client.url=http://localhost:8080
+management.endpoints.web.exposure.include=*
+
+# Zipkin - Optional to mention. It will register with ZIPKIN Automatically
+spring.zipkin.base-url=http://localhost:9411
+spring.sleuth.sampler.probability=1.0
+
+
+In Spring Cloud, Feign Client integrates with Ribbon to provide client-side load balancing. Here’s an explanation of how Feign and Ribbon work together. This is auto configured. No extra configuration is required
+
+
+########################
+Why API gateway?
+##################
+1. Simplified Client Communication: Clients (mobile apps, web apps) only need to interact with one API endpoint (the API Gateway) rather than multiple microservices.
+
+2. Decoupling: It decouples the client from the internal workings of the microservices. The client doesn't need to know how the services are structured or how they communicate internally.
+
+3. Centralized Management: It centralizes concerns like security, authentication, and logging
+
+How to implement API gateway:
+----------------------------
+
+Step 1 create APi gateway Spring boot project with following dependencies
+-----------------------------------------------------------------------------
+spring-cloud-starter-gateway(Reactive) ✅
+
+spring-cloud-starter-netflix-eureka-client ✅
+
+spring-boot-devtools ✅
+-------------------------------------------------------------------------
+
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-gateway</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.cloud</groupId>
+			<artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>runtime</scope>
+			<optional>true</optional>
+		</dependency>
+Step 2: Mention routing in yaml file
+--------------------------------------------
+server:
+  port: 5555
+  
+spring:
+  application:
+    name: api-gateway
+
+  cloud:
+    gateway:
+      routes:
+
+        # Route for microservice-1
+        - id: microservice-api-1
+          uri: lb://MICROSERVICE-1
+          predicates:
+            - Path=/micro1/**
+          filters:
+            - RewritePath=/micro1/(?<segment>.*), /${segment}
+
+        # Route for microservice-2
+        - id: microservice-api-2
+          uri: lb://MICROSERVICE-2
+          predicates:
+            - Path=/micro2/**
+          filters:
+            - RewritePath=/micro2/(?<segment>.*), /${segment}
+
+#############################################################################################################################
+🔥 Explanation
+✔ uri: lb://microservice-1(must match)
+
+microservice-1 must match application name registered in Eureka
+
+Eureka stores name in uppercase internally, but you must use lowercase name here.
+
+✔ RewritePath must match exact prefix you expose
+
+Example:
+
+Gateway receives: /micro2/user/get
+
+After rewrite → /user/get
+
+##############################################################################################################################
+
+Step 3: Register with eureka server
+-----------------------------------
+@SpringBootApplication
+@EnableDiscoveryClient
+public class ApiGatewayApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(ApiGatewayApplication.class, args);
+	}
+
+}
+
+Step 4: Perform testing:
+http://localhost:5555/micro2/fromsecondcontroller
+
+################################################################################################
+
+################################################
+✅ What is a Spring Cloud Config Server?
+################################################
+
+Spring Cloud Config Server is a central configuration management server that allows you to store, manage, and serve external configurations for all your microservices from a single location — typically from a Git repository or file system.
+
+🔧 Why is it needed?
+------------------------------------
+-> In a microservices architecture:
+-> Each service may have different configuration (ports, DB URLs, API keys).
+-> You may want to change config without redeploying the service.
+-> Managing configs across dozens of services becomes a nightmare.
+
+💡 Key Features:
+----------------------------------------
+Feature				Description
+Centralized config	All services fetch config from one place
+
+###########################################
+How to secure microservice prject?
+##############################################
+Step 1: Create AuthService with Spring Security & JWT Token
+Step 2: When you login it should generate JWT Token
+Step 3: Verify the Token in API Gateway using JwtAuthenticationFilter implements GlobalFilter class
+Step 4:  Inside Filter method verify the token
+
+
+
+
+
+###########################################################################################
+                                SPRING SECURITY : 
+###########################################################################################
+🔐 Core Features of Spring Security:
+##############################################
+1. Authentication: Verifies who you are (e.g., username & password, JWT etc.).
+
+2. Authorization: Determines what you are allowed to do (e.g., access control for URLs, methods, etc.).
+
+3. Protection Against Common Security Threats
+
+a. CSRF (Cross-Site Request Forgery)
+--------------------------------------
+1. 🛡 CSRF (Cross-Site Request Forgery)
+What it is:
+An attacker tricks a logged-in user into unknowingly sending a request (like transferring money or changing a password) to your application.
+
+Example:
+
+-> You're logged into yourbank.com.
+-> An attacker sends you a malicious link:
+-> <img src="https://yourbank.com/transfer?to=attacker&amount=1000" />
+-> If your session is still active, your browser might execute this without your intent.
+-> Spring Security Protection:
+-> Automatically adds a CSRF token to every form and expects it in requests. 
+-> In a web application that uses Spring Security, the CSRF token is automatically added as a hidden input field inside HTML forms.
+-> Blocks requests without valid tokens.
+
+
+
+2. 🔒 Session Fixation
+------------------------------------
+What it is:
+An attacker sets a known session ID for a user, then waits for the user to log in. If successful, the attacker reuses the same session.
+
+Example:
+-> Attacker sends a link with a fixed session ID:
+-> https://example.com/login;jsessionid=abc123
+-> User logs in; attacker now hijacks the session with abc123.
+-> Spring Security Protection:
+-> Regenerates the session ID after successful login by default (prevents reuse).
+
+To Enable we do this: http.sessionManagement().sessionFixation().migrateSession();  // default behavior
+
+
+3. Clickjacking
+
+-> Here's a simplified explanation of the Clickjacking attack:
+-> Attacker's Page: The attacker creates a webpage that hides a legitimate banking website inside an invisible iframe (like a hidden box).
+-> User's Interaction: The user thinks they are clicking on a button (e.g., "Play Video" or "Download File") on the attacker’s page.
+-> What Happens: In reality, the user is actually clicking on the invisible iframe that contains the banking page. They might unintentionally trigger actions on the banking site, like transferring money or changing their account settings.
+
+4. Brute-Force Attack Example
+-> What It Is: A Brute-Force Attack is when an attacker attempts to guess the correct credentials (like a password) by trying many possible combinations until they find the correct one.
+
+Example:
+-> The Attacker's Goal: The attacker wants to gain unauthorized access to a user's account, for example, the user’s bank account.
+
+-> How It Works:
+-> The attacker knows the username (e.g., "victim123") but not the password.
+-> Using automated tools, the attacker repeatedly tries different passwords for the account, for example:
+-> Password attempt 1: password123
+-> Password attempt 2: 123456
+-> Password attempt 3: victim123
+-> Password attempt 4: qwerty
+
+And so on, until the correct password is found.
+
+-> How It Looks to the User: The attacker might perform hundreds of thousands or even millions of attempts per second, which can eventually crack weak passwords.
+
+-> Attack's Success: Once the attacker guesses the correct password, they can log into the victim’s account and gain access to sensitive information, such as personal data or financial records.
+
+-> How to Prevent Brute-Force Attacks:
+
+a. Rate Limiting:
+Limit the number of failed login attempts within a certain time frame (e.g., 5 attempts per minute). After exceeding this limit, block the IP address or enforce a longer delay before the next attempt.
+
+b. CAPTCHA:
+Use CAPTCHA challenges after a certain number of failed login attempts. This helps to ensure that it's a human attempting the login rather than a bot performing automated attacks.
+
+c. Account Lockout:
+Temporarily lock an account after a set number of failed login attempts. For example, lock the account for 10 minutes after 5 failed login attempts.
+
+d. Multi-Factor Authentication (MFA):
+Use MFA to add an extra layer of security. Even if the attacker manages to guess the password, they will still need access to the second factor (e.g., a phone or hardware token).
+
+e. Strong Passwords:
+Encourage users to use strong, unique passwords (e.g., a combination of uppercase, lowercase letters, numbers, and special characters). Use a password strength checker and enforce password complexity rules.
+
+5. Password Handling: Secure password storage using hashing (e.g., BCrypt).
+
+6. Integration with Spring Boot: Auto-configuration with sensible defaults.
+
+7. JWT (JSON Web Token)
+
+################################################################################################################################
+Step 1. Create Project(like auth-service) using following dependency:
+         a. Spring web 
+         b. Spring data jpa
+         c. MySQL Driever
+         d. Spring boot devtools
+         e. Spring security
+---------------------------------------------------------------------------------------------------------
+Step 2. Setup the Configuration to connect with database in application.propertise file
+
+# ================================
+# DATABASE CONFIGURATION
+# ================================
+spring.datasource.url=jdbc:mysql://localhost:3306/authservicedb
+spring.datasource.username=root
+spring.datasource.password=root
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+
+
+# ================================
+# JPA / HIBERNATE CONFIGURATION
+# ================================
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
+-----------------------------------------------------------------------------------------------------------------------------
+
+Step 3. Follow the package structure and build Entity, controller, service, repository, configuration, payload(dto) package
+------------------------------------------------------------------------------------------------------------------------------
+
+Step 4.(a) Building Login Features to Permit All Requests Publicly Using Spring Security
+###############################################################################################################################
+
+Example 1:
+---------------
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/welcome")
+public class WelcomeController {
+	
+	
+	@GetMapping("/hello")
+	public String hello() {
+		return "hello";
+	}
+	
+	@GetMapping("/hi")
+	public String hi() {
+		return "hi";
+	}
+
+}
+
+
+SecuirtyConfigFile - to Permit All request
+------------------------------------------
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity
+public class AppSecurityConfig {
+
+	
+	@Bean
+	public SecurityFilterChain securityConfig(HttpSecurity http) throws Exception{
+		http.authorizeHttpRequests(
+				 req->{
+					 req.anyRequest().permitAll();
+				 }
+				);
+		return http.build();
+		
+	}
+} 
+
+Note: You can access these application features publically in any browser without any restrictions
+_______________________________________________________________________________________________________________________________ 
+
+4(b) : Building Login Features to Permit specific URL Requests Using Spring Security
+Example 2:
+-----------
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/api/v1/welcome")
+public class WelcomeController {
+	
+	
+	@GetMapping("/hello")
+	public String hello() {
+		return "hello";
+	}
+	
+	@GetMapping("/hi")
+	public String hi() {
+		return "hi";
+	}
+
+}
+
+SecuirtyConfigFile - to Permit All request
+------------------------------------------
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity
+public class AppSecurityConfig {
+
+	
+	@Bean
+	public SecurityFilterChain securityConfig(HttpSecurity http) throws Exception{
+		http.authorizeHttpRequests(
+				 req->{
+					req.requestMatchers("/api/v1/welcome/hello").permitAll() // Public
+					.anyRequest().authenticated(); // All other endpoints restricted
+				 }
+				);
+		return http.build();
+		
+	}
+
+}
+
+Note:
+
+The endpoint http://localhost:8083/api/v1/welcome/hello is publicly accessible.
+
+All other endpoints (e.g., /api/v1/welcome/hi) require authentication.
+
+Requests to other URLs will be restricted.
+______________________________________________________________________________________________________________________________________
+
+#################################################################################################################################
+#                                          User Registration using spring security                                              #
+#################################################################################################################################
+
+Example 3: Create User Registration Implementation using spring security
+
+-----------------------------------------------------
+Step 1: Create Entity Class with Name User.java
+-------------------------------------------------
+
+package com.authservice.entity;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name="user")
+public class User {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private long id;
+	
+	@Column(name="name", nullable = false)
+	private String name;
+	
+	@Column(name="username", nullable = false, unique = true)
+	private String username;
+	
+	@Column(name="email", nullable = false, unique = true)
+	private String email;
+	
+	@Column(name = "password")
+	private String password;
+
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getUsername() {
+		return username;
+	}
+
+	public void setUsername(String username) {
+		this.username = username;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+	
+}
+
+---------------------------------------------------------------------------------------------------------------
+Step 2: Create Repository - UserRepository.java
+----------------------------------------------------------------------------------------------------------------
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.authservice.entity.User;
+
+public interface UserRepository extends JpaRepository<User, Long>{
+	
+	
+	User findByUsername(String username);
+	User findByEmail(String email);
+	boolean existsByUsername(String username);
+	boolean existsByEmail(String email);
+}
+
+
+------------------------------------------------------------------------------------------------------------------
+Step 3: Create UserDto.java
+------------------------------------------------------------------------------------------------------------------
+public class UserDto {
+	
+	private long id;
+	
+	private String name;
+	
+	private String username;
+	
+	private String email;
+	
+	private String password;
+
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getUsername() {
+		return username;
+	}
+
+	public void setUsername(String username) {
+		this.username = username;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+}
+-------------------------------------------------------------------------------------------------------------------------
+Step 4: Create APIResponse class to send common response for API response, which will make front end integration common
+
+APIResponse<T> is a generic wrapper for API responses.
+
+Benefits:
+
+1. Standardized response structure : Every endpoint returns the same structure: {message, status, data}.
+Example : 
+{
+  "message": "User created successfully",
+  "status": 201,
+  "data": {
+    "id": 1,
+    "name": "Ajay"
+  }
+}
+
+2. Reusable for any data type : Generic <T> allows this class to wrap any type of data.
+
+3. Easy error handling : Frontend can easily detect failure using status or message
+
+4. Better communication between backend and frontend : (a)Both teams know exactly what structure to expect. (b)Reduces confusion and bugs in data handling.
+
+-------------------------------------------------------------------------------------------------------------------------
+
+public class APIResponse<T> {
+	
+	private String message;
+	private int status;
+	private T data;
+	
+	public String getMessage() {
+		return message;
+	}
+	public void setMessage(String message) {
+		this.message = message;
+	}
+	public int getStatus() {
+		return status;
+	}
+	public void setStatus(int status) {
+		this.status = status;
+	}
+	public T getData() {
+		return data;
+	}
+	public void setData(T data) {
+		this.data = data;
+	}
+	
+}
+
+
+--------------------------------------------------------------------------------------------
+Step 5 - Create AuthService - Implement Registration for creating user
+---------------------------------------------------------------------------------------------
+
+package com.auth_service.service;
+
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import com.auth_service.entity.User;
+import com.auth_service.payload.APIResponse;
+import com.auth_service.payload.UserDto;
+import com.auth_service.repository.UserRepository;
+
+@Service
+public class AuthService {
+	
+	@Autowired
+	private UserRepository userRepository;
+	
+	@Autowired
+	private PasswordEncoder passwordEncoder;
+	
+	public APIResponse<String> register(UserDto userDto) {
+		
+        // API Response global object
+		APIResponse<String> response = new APIResponse<>();
+
+	    // Check whether USERNAME exits
+	    if (userRepository.existsByUsername(userDto.getUsername())) {
+	        response.setMessage("Registration Failed");
+	        response.setStatus(400);
+	        response.setData("Username already exists");
+	        return response;
+	    }
+
+	    // Check whether email exists
+	    if (userRepository.existsByEmail(userDto.getEmail())) {
+	        response.setMessage("Registration Failed");
+	        response.setStatus(400);
+	        response.setData("Email already registered");
+	        return response;
+	    }
+
+	    // Encode password before saving to database
+	    User user = new User();
+	    BeanUtils.copyProperties(userDto, user);
+	    user.setPassword(passwordEncoder.encode(userDto.getPassword())); // password encoded
+
+	    User savedUser = userRepository.save(user);
+
+	    if (savedUser == null) {
+	        response.setMessage("Registration Failed");
+	        response.setStatus(500);
+	        response.setData("Unexpected server error");
+	        return response;
+	    }
+
+	    // Success response
+	    response.setMessage("Registration Successful");
+	    response.setStatus(201);
+	    response.setData("User registered successfully");
+
+	    return response;
+	}
+
+}
+-----------------------------------------------------------------------------------------------
+Step 6 : build controller layer 
+
+package com.auth_service.controller;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.auth_service.payload.APIResponse;
+import com.auth_service.payload.UserDto;
+import com.auth_service.service.AuthService;
+
+@RestController
+@RequestMapping("/api/v1/auth")
+public class AuthController {
+	
+	@Autowired
+	private AuthService authService;
+	
+	
+	 @PostMapping("/register")
+	    public ResponseEntity<APIResponse<String>> register(@RequestBody UserDto dto) {
+	        APIResponse<String> response = authService.register(dto);
+	        return new ResponseEntity<>(response, HttpStatusCode.valueOf(response.getStatus()));
+	    }
+}
+
+
+-------------------------------------------------------------------------------------------------
+Step 7:
+(A). Build configuration class for third party library used which IOC container was not able to inject bean so manually you tell IOC container(by creating configuration class)  looks this bean you inject.
+(B). Disable csrf in config file to access api end point from different client like postman/swagger
+-----------------------------------------------------------------------------------------------------
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity
+public class AppSecurityConfig {
+	
+	@Bean
+	public PasswordEncoder getEncoder() {
+		return new BCryptPasswordEncoder();
+	}
+
+	
+	@Bean
+	public SecurityFilterChain securityConfig(HttpSecurity http) throws Exception {
+	    http
+	        .csrf(csrf -> csrf.disable())  // Disable CSRF
+	        .authorizeHttpRequests(auth -> 
+	            auth.requestMatchers(
+	            		"/api/v1/auth/register/", 
+	            		"/v3/api-docs/**",
+	                    "/swagger-ui/**",
+	                    "/swagger-ui.html",
+	                    "/swagger-resources/**",
+	                    "/webjars/**").permitAll()
+	            .anyRequest().authenticated()
+	        );
+
+	    return http.build();
+	}
+}
+
+Q) Why we need a Configuration Class for Third-Party Beans?
+
+Spring Boot automatically injects (Autowires) many beans only if they are known to the IoC container.
+
+Some third-party libraries (like BCryptPasswordEncoder) are not automatically created, so Spring does not know how to generate them.
+
+Therefore, you manually create a @Configuration class and register the bean:
+
+@Bean
+public PasswordEncoder getEncoder() {
+    return new BCryptPasswordEncoder();
+}
+
+📌 Benefit:
+
+You instruct the IoC container: “Here is a bean, please manage it.”
+
+Now Spring can autowire PasswordEncoder anywhere.
+
+
+(Q) Why Disable CSRF for Postman/Swagger?
+
+CSRF protection is required for web browsers using cookies.
+
+But when calling REST APIs from:
+
+Postman
+
+Swagger UI
+
+Angular/React client
+
+Mobile apps
+
+…there is no browser session → so CSRF token is not required.
+
+Thus we disable it:
+
+http.csrf(csrf -> csrf.disable());
+
+
+📌 Benefit:
+
+Allows API access from external clients.
+
+Removes CSRF-token validation errors.
+
+More convenient for testing tools.
+
+
+------------------------------------------------------------------------------------------------------
+Step 8: Add Swagger dependency for generating API documentation
+------------------------------------------------------------------------------------------------------
+<dependency>
+    <groupId>org.springdoc</groupId>
+    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    <version>2.5.0</version>
+</dependency>
+
+To Access Swagger - Run the Project
+
+http://localhost:8080/swagger-ui.html
+
+Or (sometimes):
+
+http://localhost:8080/swagger-ui/index.html
+-----------------------------------------------------------------------------------------------------------------------------
+
+##########################################################################################################################
+#                          Implementing Login Module                                                                      #
+##########################################################################################################################
+
+LoginDto.java
+------------------
+public class LoginDto {
+	
+	private String username;
+	private String password;
+	
+	public String getUsername() {
+		return username;
+	}
+	public void setUsername(String username) {
+		this.username = username;
+	}
+	public String getPassword() {
+		return password;
+	}
+	public void setPassword(String password) {
+		this.password = password;
+	}
+	
+	
+
+}
+------------------------------------------------------------
+
+AuthController.java
+-----------------------
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
+
+import com.authservice.dto.APIResponse;
+import com.authservice.dto.LoginDto;
+import com.authservice.dto.UpdatePasswordDto;
+import com.authservice.dto.UserDto;
+import com.authservice.service.AuthService;
+
+@RestController
+@RequestMapping("/api/v1/auth/")
+public class AuthController {
+	
+	@Autowired
+	private AuthService authService;
+	
+	@Autowired
+	private AuthenticationManager authManager;
+	
+	 @PostMapping("/register")
+	    public ResponseEntity<APIResponse<String>> register(@RequestBody UserDto dto) {
+	        APIResponse<String> response = authService.register(dto);
+	        return new ResponseEntity<>(response, HttpStatusCode.valueOf(response.getStatus()));
+	    }
+	 
+
+ 
+	 
+	 @PostMapping("/login")
+	 public ResponseEntity<APIResponse<String>> loginCheck(@RequestBody LoginDto loginDto){
+		 
+		 APIResponse<String> response = new APIResponse<>();
+		 
+		 UsernamePasswordAuthenticationToken token = 
+				 new UsernamePasswordAuthenticationToken(loginDto.getUsername(), loginDto.getPassword());
+		 
+		try {
+			 Authentication authenticate = authManager.authenticate(token);
+			 
+			 if(authenticate.isAuthenticated()) {
+				 response.setMessage("Login Sucessful");
+				 response.setStatus(200);
+				 response.setData("User has logged");
+				 return new ResponseEntity<>(response, HttpStatusCode.valueOf(response.getStatus()));
+			 }
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		
+		 response.setMessage("Failed");
+		 response.setStatus(401);
+		 response.setData("Un-Authorized Access");
+		 return new ResponseEntity<>(response, HttpStatusCode.valueOf(response.getStatus()));
+	 }
+
+}
+
+--------------------------------------------------------------
+
+CustomerUserDetailsService.java
+-----------------------------------------
+import java.util.Collections;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+import com.authservice.entity.User;
+import com.authservice.repository.UserRepository;
+
+@Service
+public class CustomerUserDetailsService implements UserDetailsService{
+	
+	@Autowired
+	private UserRepository userRepository;
+
+	@Override
+	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+		User user = userRepository.findByUsername(username);
+		
+		return new org.springframework.security.core.userdetails.User(user.getUsername(),user.getPassword(),Collections.emptyList());
+	}
+
+}
+
+--------------------------------------------------------------------------------
+
+AppSecurityConfig.java
+-----------------------
+package com.auth_service.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+
+import com.auth_service.service.CustomerUserDetailsService;
+
+@Configuration
+@EnableWebSecurity
+public class AppSecurityConfig {
+	
+	@Autowired
+    private CustomerUserDetailsService customerUserDetailsService;
+
+    // Open ENDPOINTS
+    private static final String[] OPEN_URLS = {
+            "/api/v1/auth/register",
+            "/api/v1/auth/login",
+            "/v3/api-docs/**",
+            "/swagger-ui/**",
+            "/swagger-ui.html",
+            "/swagger-resources/**",
+            "/webjars/**"
+    };
+
+    // ==========================
+    // 1. Password Encoder Bean
+    // ==========================
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    // ==========================================================
+    // 2. AuthenticationManager Bean (Correct Way - Spring Security 6)
+    // ==========================================================
+    @Bean
+    public AuthenticationManager authenticationManager(
+            HttpSecurity http,
+            PasswordEncoder passwordEncoder
+    ) throws Exception {
+
+        AuthenticationManagerBuilder authBuilder =
+                http.getSharedObject(AuthenticationManagerBuilder.class);
+
+        authBuilder
+                .userDetailsService(customerUserDetailsService)
+                .passwordEncoder(passwordEncoder);
+
+        return authBuilder.build();
+    }
+
+    // ====================================
+    // 3. Security Filter Chain Configuration
+    // ====================================
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+        http.csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                    .requestMatchers(OPEN_URLS).permitAll()
+                    .anyRequest().authenticated()
+            );
+
+        return http.build();
+    }
+
+}
+Note : Now test this login module through postman : http://localhost:8083/api/v1/auth/login
+
+{
+    "username":"mike",
+    "password":"Ajay@123"
+}
+
+If login success you will show this .
+{
+    "message": "Login Sucessful",
+    "status": 200,
+    "data": "User has logged"
+}
+-----------------------------------------------------------------------------------------------------
+
+
+#################################################################################
+# How to perform Authorization - Role Based Access in your project              #
+#################################################################################
+
+Modify UserDto.java
+--------------------
+
+package com.authservice.dto;
+
+
+public class UserDto {
+	
+	private long id;
+	
+	private String name;
+	
+	private String username;
+	
+	private String email;
+	
+	private String password;
+	
+	private String role; //This one is added
+
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getUsername() {
+		return username;
+	}
+
+	public void setUsername(String username) {
+		this.username = username;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	public String getRole() {
+		return role;
+	}
+
+	public void setRole(String role) {
+		this.role = role;
+	}
+
+}
+
+Modify User.java
+----------------
+package com.authservice.entity;
+
+import jakarta.persistence.*;
+
+@Entity
+@Table(name="user")
+public class User {
+	
+	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
+	private long id;
+	
+	@Column(name="name", nullable = false)
+	private String name;
+	
+	@Column(name="username", nullable = false, unique = true)
+	private String username;
+	
+	@Column(name="email", nullable = false, unique = true)
+	private String email;
+	
+	@Column(name = "password")
+	private String password;
+	
+	@Column(name = "role")
+	private String role;//This is added
+
+	public long getId() {
+		return id;
+	}
+
+	public void setId(long id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getUsername() {
+		return username;
+	}
+
+	public void setUsername(String username) {
+		this.username = username;
+	}
+
+	public String getEmail() {
+		return email;
+	}
+
+	public void setEmail(String email) {
+		this.email = email;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
+
+	public String getRole() {
+		return role;
+	}
+
+	public void setRole(String role) {
+		this.role = role;
+	}
+	
+	
+	
+
+}
+
+Modify AppSecurityConfig.java
+---------------------------------
+package com.authservice;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+
+import com.authservice.service.CustomerUserDetailsService;
+
+@Configuration
+@EnableWebSecurity
+public class AppSecurityConfig {
+	
+	@Autowired
+	private CustomerUserDetailsService customerUserDetailsService;
+
+    String[] publicEndpoints = {
+        "/api/v1/auth/register",
+        "/api/v1/auth/login",
+        "/api/v1/auth/update-password",
+        "/v3/api-docs/**",
+        "/swagger-ui/**",
+        "/swagger-ui.html",
+        "/swagger-resources/**",
+        "/webjars/**"
+    };
+
+    @Bean
+    public PasswordEncoder getEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+    
+    @Bean
+	public AuthenticationManager authManager(AuthenticationConfiguration config) throws Exception {
+		return config.getAuthenticationManager();
+	}
+    
+    @Bean
+	public AuthenticationProvider authProvider() {
+
+		DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider(); // Spring security Old version(deppricated)
+
+		authProvider.setUserDetailsService(customerUserDetailsService);
+		authProvider.setPasswordEncoder(getEncoder());
+
+		return authProvider;
+	}
+
+    @Bean
+	public SecurityFilterChain securityConfig(HttpSecurity http) throws Exception{
+		
+		http.authorizeHttpRequests( req -> {
+			req.requestMatchers(publicEndpoints)
+			   .permitAll()
+			   .requestMatchers("/api/v1/admin/welcome").hasRole("ADMIN") // for role based access(Added)
+			   .anyRequest()
+			   .authenticated();			
+		}).httpBasic(withDefaults());
+		
+		return http.csrf().disable().build();
+	}
+
+}
+
+Note : httpBasic(withDefaults()) , enables default Basic Authentication in your Spring Boot application so that protected APIs require username and password to test API in postman(Authentication/Basic Auth).
+
+Modify CustomerUserDetailsService.java
+---------------------------------------
+package com.authservice.service;
+
+import java.util.Collections;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.stereotype.Service;
+
+import com.authservice.entity.User;
+import com.authservice.repository.UserRepository;
+
+@Service
+public class CustomerUserDetailsService implements UserDetailsService{
+	
+	@Autowired
+	private UserRepository userRepository;
+
+	@Override
+	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
+		User user = userRepository.findByUsername(username);
+		
+		return new org.springframework.security.core.userdetails.User(user.getUsername(),user.getPassword(),Collections.singleton(new SimpleGrantedAuthority(user.getRole())));//This should be modified
+	}
+
+}
+
+Note : 
+
+Spring Security does NOT understand your custom User entity.
+
+Spring needs a UserDetails object, not your entity.
+
+So you convert your user into Spring’s security user:
+
+👉 This line creates a Spring Security user with:
+
+Username → taken from DB
+Password → hashed password from DB
+Authorities (Roles) → converted role like ROLE_USER or ROLE_ADMIN
+
+1. user.getUsername() : Used by Spring to match login input.
+
+2. user.getPassword() : Spring compares this (hashed) with the encoded password.
+
+3. Authority (Role) : Collections.singleton(new SimpleGrantedAuthority(user.getRole()))
+ --> Wraps the role into a GrantedAuthority object
+   ✔ Example: "ROLE_USER" becomes a security role
+   ✔ Required for role-based access: .hasRole("USER")
+---------------------------
+
+✅ 3. Test Using Postman or curl
+🔹 Test with Postman
+Choose GET and enter:
+http://localhost:8080/api/v1/admin/welcome
+
+Go to Authorization tab
+Type: Basic Auth
+Username: admin
+Password: admin (assuming that's the encoded password in DB)
+
+Click Send.
+
+You should get a 200 OK and the "Welcome, Admin!" message if the role is correctly configured.
+----------------------------------------------------------------------------------------------------------------------
+
+Imnport Notes
+############################
+Stateless: User details are not stored at the server side. Hence every every request we have to perform authention
+
+Statefull: User details are  stored at the server side. Once the use perform login, Server will generate SessionId, One Copy of session will be kept at server side & another copy is given to the client, so that for subsequent request we can authenticate the user by sending seesionId with the request to server. When session Id matches you will get the respsone
+
+===========================================================================================================================================
+
+✅ What is JWT?
+--------------------
+JWT (JSON Web Token) is a secure, compact, digitally-signed token used to:
+
+✔ Authenticate users
+✔ Authorize access to APIs
+✔ Verify user identity without storing session on server
+
+It is a string token that the server generates after successful login, and the client uses this token for all next requests.
+
+🎯 Why JWT is used?
+--------------------------------
+✔ 1. For Authentication : After login, server creates a JWT token → client uses it in every request.
+
+✔ 2. For Authorization : Server checks token → decides if user is allowed to access an API.
+
+✔ 3. No Session Storage Required : No need of session in server memory → JWT is “stateless”.
+
+✔ 4. Secure : Because of signature, nobody can change data inside token.
+
+
+Q: ✅ How JWT Authentication Works (very important) : JWT (JSON Web Token) is used to verify the identity of a user without needing to check their username/password again for every request.
+_____________________________________________________________________________________________________________________________________________________________________________________________
+
+-----------------------------------------------------------------------------------------------------------------------
+🟦 STEP 1 — Client (browser, mobile app, Postman, etc.) Sends request with Username + Password to the server API : 
+-----------------------------------------------------------------------------------------------------------------------
+
+POST /login
+
+Example request:
+
+{
+  "username": "ajay",
+  "password": "1234"
+}
+
+---------------------------------------
+🟩 STEP 2 — Server Verifies Credential
+----------------------------------------
+
+The server checks:
+
+Is this username present in DB?
+
+Is the password correct?
+
+Is the user active?
+
+If YES, then server creates a JWT token.
+
+If NO → return 401 Unauthorized.
+
+------------------------------------------------------
+🟧 STEP 3 — Server Sends JWT Token Back to Client
+------------------------------------------------------
+
+If authentication is successful:
+
+Server creates a JWT containing: UserId , username , roles , token expiration time .
+
+Then server sends the JWT token back to client :
+
+Example:
+
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+
+🟥 IMPORTANT: After login, the user does NOT send username & password again
+
+Now user must send only the JWT token every time.
+
+-------------------------------------------------------
+🟦 STEP 4 — Client Sends Requests with JWT Token
+-------------------------------------------------------
+
+Now suppose the client requests: GET /api/user/profile
+
+The client will add the JWT token in the Authorization Header: Authorization: Bearer <jwt-token>
+
+Full example:
+Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
+
+----------------------------------------------------
+🟩 STEP 5 — Server Verifies the JWT Token
+-----------------------------------------------------
+
+Server checks:
+
+Is the token real and valid?
+
+Has anyone modified the token?
+
+Is token expired?
+
+Is signature correct?
+
+If the token is valid → user is authenticated.
+
+-------------------------------------------------
+🟧 STEP 6 — Server Returns the Protected Data
+--------------------------------------------------
+
+Since token is valid, server returns response:
+
+Example:
+
+{
+  "userId": 101,
+  "name": "Ajay Kumar",
+  "email": "ajay@mail.com"
+}
+
+
+If token is invalid/expired → returns 401 Unauthorized.
+
+--------------------------------------------------------------------
+⭐ Final Summary (Your Understanding is Correct)
+
+Here is the correct flow you were trying to say:
+
+1. Client sends username + password
+2. Server verifies → creates JWT token → sends to client
+3. Client stores token (localStorage/cookies)
+4. Client sends token in Authorization Header with each request
+5. Server verifies signature → returns data
+----------------------------------------------------------------------
+
+Advantages of JWT Token
+-----------------------------
+-> Stateless Communication
+-> This performs Authentication of subsequent request made post login was successful
+-> Highly Secured
+-> Set Expiry time for token
+-> Securing All Microservice can be made easy with JWT Token
+
+🧱 Structure of JWT
+=======================
+A JWT has 3 parts separated by dots: header.payload.signature
+
+1️⃣ Header : 
+
+Contains algorithm info (HS256)
+
+Token type (JWT)
+
+2️⃣ Payload :
+
+Contains user data
+
+Example data stored:
+
+userId
+username
+roles
+token expiry time (exp)
+
+3️⃣ Signature :
+
+Created using secret key on server
+
+Ensures token cannot be modified by the client
+
+❌ Disadvantages of JWT : 
+--------------------------------
+1️⃣ Cannot Be Invalidated Easily (Major Problem)
+
+Once a JWT is generated, it stays valid until it expires.
+
+If:
+user logs out
+user changes password
+admin blocks user
+
+👉 Old token still remains valid until expiry.
+
+You cannot delete it from server because JWT is stateless.
+
+✔ Biggest drawback
+✔ Interviewers love this point
+
+=========================================================================================================================================
+
+####################################################
+Implementing JWT Token
+####################################################
+
+Download the dependency
+------------------------
+<dependency>
+    <groupId>com.auth0</groupId>
+    <artifactId>java-jwt</artifactId>
+    <version>4.4.0</version>
+</dependency>
+=====================================================================================================================================
+“JWT has two major steps:
+Section 1 : Generating the token after authentication, and
+Section 2 : Validating the token on every request to secure protected endpoints.”
+________________________________________________________________________________________________________________________________
+Section 1 : Generating the token after authentication : 
+
+Step 1:  Create JWTService class to generate jwt token
+----------------------------------------------------------------------------------------------------------------------------------
+package com.auth_service.service;
+
+import java.util.Date;
+
+import org.springframework.stereotype.Service;
+
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+
+@Service
+public class JWTService {
+	
+	private static final String SECRET_KEY = "my-super-secret-key";
+    private static final long EXPIRATION_TIME = 86400000; // 1 day token validation
+
+    public String generateToken(String username, String role) {
+        return JWT.create()
+            .withSubject(username)
+            .withClaim("role", role)
+            .withIssuedAt(new Date())
+            .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+            .sign(Algorithm.HMAC256(SECRET_KEY));
+    }
+}
+_______________________________________________________________________________________________________________________________________
+Note :
+1. private static final String SECRET_KEY = "my-super-secret-key" :
+   This is the secret key used for signing the JWT.
+   Only the server should know this key.
+   It ensures the token cannot be modified by anyone.
+
+2. public String generateToken(String username, String role) { : 
+   This method creates and returns a JWT token string.
+   It takes two inputs: username and role 
+   And inserts them into the token.
+
+3. return JWT.create() : Begins building a JWT using java-jwt (Auth0) library.
+
+4. .withSubject(username) : sub claim and Identifies the user. For example, "sub": "ajay"
+
+5. .withClaim("role", role) : Adds additional custom field in payload: "role": "ADMIN" or "USER"
+
+6. .withIssuedAt(new Date()) : Add Issued Time, Meaning → When the token was created.
+
+7. .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRATION_TIME)) : Meaning → Token is valid for 1 day from now.
+
+8. .sign(Algorithm.HMAC256(SECRET_KEY));  This is the MOST IMPORTANT part.
+    Signs the token using HS256 algorithm.
+    Uses your SECRET_KEY.
+    This creates the signature part of JWT.
+    It ensures nobody can modify the token.
+
+9. @Service : @Service → @Service tells Spring Boot that this class is a service layer component.
+              Spring will automatically create an object (bean) of this class at application startup.
+
+   public class JWTService { : Because of @Service , Spring can automatically detect and inject this class anywhere using @Autowired.
+_______________________________________________________________________________________________________________________________________
+
+Step 2 : Modify AuthController  Class
+
+@Autowired
+private JwtService jwtService;
+
+if (authenticate.isAuthenticated()) {
+            String jwtToken = jwtService.generateToken(loginDto.getUsername(), // modified( to generate jwt token)
+                authenticate.getAuthorities().iterator().next().getAuthority()); // modified
+
+            response.setMessage("Login Successful");
+            response.setStatus(200);
+            response.setData(jwtToken);  // modified ( to return JWT)
+            return new ResponseEntity<>(response, HttpStatusCode.valueOf(response.getStatus()));
+_______________________________________________________________________________________________________________________________________
+Note : 
+1. jwtService.generateToken(username, role) : 
+   Calls your JWTService to generate a JWT token.
+   Passes: username and role
+   JWT will include both inside its payload.
+
+2. loginDto.getUsername() : 
+   Reads the username sent by the client during login.
+   This will be stored inside the JWT as the subject (sub).
+
+3. authenticate.getAuthorities() : 
+   After login authentication succeeds, Spring Security gives an Authentication object.
+   getAuthorities() returns a list/set of roles assigned to the user.
+   Example: [ROLE_USER] or [ROLE_ADMIN].
+
+4. .iterator().next().getAuthority() : 
+   iterator().next() picks the first role from the list.
+
+5 .getAuthority() : extracts the role name as a string. Example: "ROLE_USER".
+
+Note : After that open swager and login with crediantial , you will get token 
+
+To check user details inside token go to jwt.io website and past the token you will get information .
+_____________________________________________________________________________________________________________________________________
+
+Section 2 : Validating the token on every request to secure protected endpoints.” : HOW ?
+
+Client sends request with JWT token in the Authorization header,Now Spring Security takes that request and sends every request to JWTFilter first.
+
+JWTFilter: Does
+
+extracts the token from the header
+validates signature & expiration
+loads UserDetails
+sets authentication in SecurityContext
+
+If valid → request goes to controller.
+If invalid → return 401 Unauthorized.
+-------------------------------------------------------------------------------------------------------------------------------------
+Step 1: modify JWTService class to validate the token
+
+public String validateTokenAndRetrieveSubject(String token) {
+   return JWT.require(Algorithm.HMAC256(SECRET_KEY))
+    .build()
+    .verify(token)
+    .getSubject();
+    }
+
+Documentation : 
+
+1. JWT.require(Algorithm.HMAC256(SECRET_KEY)) :  Creates a JWT verifier object.
+Tells Auth0 library:
+    “Use the HMAC256 algorithm”
+    “Use this SECRET_KEY to validate the token’s signature.”
+     If the token was not signed with this secret → verification fails.
+
+2. .build() : Builds the verifier.
+    Prepares it for actual token validation.
+
+3. .verify(token) : This is the most important part:
+The method:
+     checks signature
+     checks expiry
+     checks issued at
+     checks token structure
+
+If token is:
+    expired
+    modified
+    corrupted
+    signed with wrong secret
+  👉 It throws an exception (token = invalid)
+
+If token is valid:
+   👉 It returns a DecodedJWT object.
+
+4. .getSubject() : Extracts the sub claim from the token.
+In JWT, sub = username.
+Whatever you set in: .withSubject(username)
+will be returned here.
+---------------------------------------------------------------------------------------------------------------------------------------
+
+Step 2: Create JWTFilter class to validate the token
+
+package com.auth_service.filter;
+
+import java.io.IOException;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.auth_service.service.CustomerUserDetailsService;
+import com.auth_service.service.JWTService;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+@Component
+public class JWTFilter extends OncePerRequestFilter{ 
+	
+	    @Autowired
+	    private JWTService jwtService;
+
+	    @Autowired
+	    private CustomerUserDetailsService userDetailsService;
+
+	@Override // This method is called for every HTTP request. Your filter logic goes here.
+	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+			throws ServletException, IOException {
+		
+		
+		 String authHeader = request.getHeader("Authorization"); // Reads the Authorization header from the incoming HTTP request. This is where the client should send Bearer <token>.
+	        if (authHeader != null && authHeader.startsWith("Bearer ")) { 
+	            String jwt = authHeader.substring(7); 
+	            String username = jwtService.validateTokenAndRetrieveSubject(jwt); 
+
+	            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+	                var userDetails = userDetailsService.loadUserByUsername(username);
+	                var authToken = new UsernamePasswordAuthenticationToken(
+	                        userDetails, null, userDetails.getAuthorities());
+
+	                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+	                SecurityContextHolder.getContext().setAuthentication(authToken);
+	            }
+	        }
+
+	        filterChain.doFilter(request, response);		
+	}
+}
+
+Documentation : 
+   1. OncePerRequestFilter ensures doFilterInternal runs only once per HTTP request (no double execution for forwards/includes).
+
+   2. if (authHeader != null && authHeader.startsWith("Bearer ")) { : 
+      Checks header exists and starts with "Bearer " (standard convention). 
+      If not present or not a Bearer token, the filter will skip validation and let the chain continue (request will later be rejected if endpoint is protected).
+
+   3. String jwt = authHeader.substring(7); 
+      Removes the "Bearer " prefix (7 characters) and keeps the raw JWT string for validation.
+
+   4. String username = jwtService.validateTokenAndRetrieveSubject(jwt);
+      Calls your JWTService to:
+      validate signature,
+      check expiry,
+      (optionally) check other claims,
+      and return the subject (username) if valid.
+      If token invalid/expired, this method should return null or throw an exception (implementation dependent).
+
+   5. if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) { 
+      If a username was retrieved and there is no existing authentication in the security context, proceed to create an authentication object.
+      The == null check avoids overwriting an already authenticated context (e.g., from another filter).
+
+
+   6. var userDetails = userDetailsService.loadUserByUsername(username); // var java 10 feature
+      Loads user information (especially authorities/roles) required by Spring Security.
+
+   7 . var authToken = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+       Creates an Authentication object using UserDetails.
+       The credentials argument is null because we already have a valid token (no need for password here).
+
+   8. authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+      Adds request-specific details (IP, session id) to the auth token — useful for auditing or other checks
+
+   9. SecurityContextHolder.getContext().setAuthentication(authToken);
+      Sets the Authentication into Spring’s SecurityContext. 
+      From now on, SecurityContextHolder.getContext().getAuthentication() will return this object and security checks (e.g., @PreAuthorize, hasRole) will work.
+
+  10. filterChain.doFilter(request, response);
+      Continues the filter chain so the request eventually reaches the controller (or next filter). 
+      This is called whether or not a token was present or valid.
+---------------------------------------------------------------------------------------------------------------------------------------
+
+Step 3 : modify AppSecurityConfig class for internal validation
+
+@Autowired
+	private JWTFilter jwtFilter; // added for validation
+
+@Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+        http.csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> {
+                auth.requestMatchers(OPEN_URLS).permitAll()
+                    .requestMatchers("/api/v1/welcome/message").hasRole("USER") 
+                    .anyRequest().authenticated();
+            })
+            .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class); // Add this for internal validation
+
+        return http.build();
+    }
+
+Documentation : .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
+This line tells Spring Security:
+👉 Add my JWTFilter before Spring’s default UsernamePasswordAuthenticationFilter.
+
+This means:
+Every request will first pass through your JWTFilter, so the JWT token can be extracted and validated BEFORE Spring checks authentication.
+
+Note : 
+Now open swager and login with crediantial, copy the token and past in Heder(Authorization) of postman tool .
+
+=======================================================================================================================================
+This is below PSA full code if you are not understanding then refer this code .
+____________________________________________________________________________________________________________________________________
+Create JWTService class
+---------------------------
+
+package com.authservice.jwt;
+
+import java.util.Date;
+import org.springframework.stereotype.Service;
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+
+@Service
+public class JwtService {
+
+    private static final String SECRET_KEY = "my-super-secret-key";
+    private static final long EXPIRATION_TIME = 86400000; // 1 day
+
+    public String generateToken(String username, String role) {
+        return JWT.create()
+            .withSubject(username)
+            .withClaim("role", role)
+            .withIssuedAt(new Date())
+            .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+            .sign(Algorithm.HMAC256(SECRET_KEY));
+    }
+
+    public String validateTokenAndRetrieveSubject(String token) {
+        return JWT.require(Algorithm.HMAC256(SECRET_KEY))
+            .build()
+            .verify(token)
+            .getSubject();
+    }
+}
+
+Modify AuthController  Class
+--------------------------------
+
+@Autowired
+private JwtService jwtService;
+
+@PostMapping("/login")
+public ResponseEntity<APIResponse<String>> loginCheck(@RequestBody LoginDto loginDto) {
+    APIResponse<String> response = new APIResponse<>();
+
+    UsernamePasswordAuthenticationToken token = 
+        new UsernamePasswordAuthenticationToken(loginDto.getUsername(), loginDto.getPassword());
+
+    try {
+        Authentication authenticate = authManager.authenticate(token);
+        if (authenticate.isAuthenticated()) {
+            String jwtToken = jwtService.generateToken(loginDto.getUsername(),
+                authenticate.getAuthorities().iterator().next().getAuthority());
+
+            response.setMessage("Login Successful");
+            response.setStatus(200);
+            response.setData(jwtToken);  // return JWT
+            return new ResponseEntity<>(response, HttpStatusCode.valueOf(response.getStatus()));
+        }
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+
+    response.setMessage("Failed");
+    response.setStatus(401);
+    response.setData("Unauthorized");
+    return new ResponseEntity<>(response, HttpStatusCode.valueOf(response.getStatus()));
+}
+
+Develop JWTFilter Class
+-----------------------------
+
+package com.authservice.jwt;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.authservice.service.CustomerUserDetailsService;
+
+import java.io.IOException;
+
+@Component
+public class JwtFilter extends OncePerRequestFilter {
+
+    @Autowired
+    private JwtService jwtService;
+
+    @Autowired
+    private CustomerUserDetailsService userDetailsService;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    FilterChain filterChain) throws ServletException, IOException {
+
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String jwt = authHeader.substring(7);
+            String username = jwtService.validateTokenAndRetrieveSubject(jwt);
+
+            if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                var userDetails = userDetailsService.loadUserByUsername(username);
+                var authToken = new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities());
+
+                authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
+        }
+
+        filterChain.doFilter(request, response);
+    }
+}
+
+Modify Secuirty Config
+---------------------------
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import com.authservice.service.CustomerUserDetailsService;
+import com.authservice.service.JwtFilter;
+
+@Configuration
+@EnableWebSecurity
+public class AppSecurityConfig {
+	
+	@Autowired
+	private CustomerUserDetailsService customerUserDetailsService;
+	
+	@Autowired
+	private JwtFilter filter;
+
+    String[] publicEndpoints = {
+        "/api/v1/auth/register",
+        "/api/v1/auth/login",
+        "/api/v1/auth/update-password",
+        "/v3/api-docs/**",
+        "/swagger-ui/**",
+        "/swagger-ui.html",
+        "/swagger-resources/**",
+        "/webjars/**"
+    };
+
+    @Bean
+    public PasswordEncoder getEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+    
+    @Bean
+	public AuthenticationManager authManager(AuthenticationConfiguration config) throws Exception {
+		return config.getAuthenticationManager();
+	}
+    
+    @Bean
+	public AuthenticationProvider authProvider() {
+
+		DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+
+		authProvider.setUserDetailsService(customerUserDetailsService);
+		authProvider.setPasswordEncoder(getEncoder());
+
+		return authProvider;
+	}
+
+    @Bean
+	public SecurityFilterChain securityConfig(HttpSecurity http) throws Exception{
+		
+		http.authorizeHttpRequests( req -> {
+			req.requestMatchers(publicEndpoints)
+			   .permitAll()
+			   .requestMatchers("/api/v1/admin/welcome").hasRole("ADMIN")
+			   .anyRequest()
+			   .authenticated();			
+		}) .authenticationProvider(authProvider())
+        .addFilterBefore(filter, UsernamePasswordAuthenticationFilter.class);
+		
+		return http.csrf().disable().build();
+	}
+
+}
+
+Q: How do you convert this AuthServce project(monolithic) into distributed microservice architecture : for that add Eureka client to register this project with Eureka server
+
+<dependency>
+     <groupId>org.springframework.cloud</groupId>
+     <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+</dependency>
+
+<dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-dependencies</artifactId>
+        <version>${spring-cloud.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>

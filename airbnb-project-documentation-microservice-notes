@@ -1402,7 +1402,7 @@ public class PropertyController {
         }
     }
 
-STEP : 
+STEP 7 : create PropertyService to add property through logic 
 
 package com.propertyMicroservice.service;
 
@@ -1464,19 +1464,28 @@ public class PropertyService {
 	    property.setState(state);
 	    
 	    Property savedProperty = propertyRepository.save(property);
+
+        for (RoomsDto roomsDto : dto.getRooms()) {
+            Rooms rooms = new Rooms();
+            rooms.setProperty(savedProperty);
+            rooms.setRoomType(roomsDto.getRoomType());
+            rooms.setBasePrice(roomsDto.getBasePrice());
+                  
+            roomRepository.save(rooms);
+        }
 	    
 	    return savedProperty;
 }
 
 }
 
-STEP : JSON DATA OF Rooms entity class for sending to DB
+STEP 8 : convert into JSON DATA OF Rooms entity class for sending to DB
 
 Q: How to send in postman ?
 
 select form-data and choose body and 
 
-in key :property(text) and in value : give json formate data
+in key :name of property(text) and in value : give json formate data
 below property give: files (select file)  and upload fille
 
 {
@@ -1500,24 +1509,643 @@ below property give: files (select file)  and upload fille
   ]
 }
 
-click here to send in db Post : http://localhost:9091/api/v1/property/add-property , you will get get details and data saved in db
+note : click here to send in db Post : http://localhost:9091/api/v1/property/add-property , you will get get details and data saved in db
 
 
+Step 9 : create a aws account to store the audio, video and photo in s3 service 
+
+(a). create a bucket in s3 service to store the photoes
+
+___________________________________________________________________________________________________________________________
+
+✅ Create S3 Bucket in AWS — Step by Step
+1️⃣ Login to AWS
+
+Go to
+🔗 https://aws.amazon.com/console
+
+→ Sign in to your AWS account.
+
+2️⃣ Open S3 Service
+
+Search S3 in the AWS search bar → Click Amazon S3.
+
+3️⃣ Create Bucket
+
+Click the orange button:
+👉 Create bucket
+
+4️⃣ Fill Basic Details
+Bucket name
+
+Must be globally unique
+
+Use lowercase
+
+No spaces
+Example:
+
+my-property-app-bucket
+
+AWS Region
+
+Choose the same region as your Spring Boot config.
+Common:
+
+ap-south-1 (Mumbai)
+
+5️⃣ Bucket Settings
+Block Public Access (recommended)
+
+Keep ON — unless you are hosting public images.
+
+If you want uploaded images to be public, then:
+
+Uncheck "Block all public access"
+
+Confirm the warning.
+
+But recommended is:
+
+Keep private
+
+Use signed URLs.
+
+6️⃣ Bucket Versioning (optional)
+
+If you want old versions of images → turn ON.
+Otherwise leave OFF.
+
+7️⃣ Encryption
+
+Keep default:
+
+SSE-S3 (server-side encryption).
+
+8️⃣ Click: Create bucket
+
+Done! 🎉
+Your bucket is now created.
+
+⭐ Next Step for Your Spring Boot App
+
+You need:
+
+Bucket name
+my-property-app-bucket
+
+Region
+ap-south-1
 
 
+You will also need:
+
+Access Key + Secret Key
+
+Go to:
+
+AWS Console → IAM → Users → (Your User) → Security Credentials → Create Access Key
+
+→ Choose Command Line / Programmatic Access
+→ Download .csv file.
+
+___________________________________________________________________________________________________________________
+
+(b). After perform the configuration for aws s3 service in application.propertise
+
+     Note : But before performing the work on asw s2 service , Add of below dependency in pom.xml file
+
+       <dependency>
+			<groupId>com.amazonaws</groupId>
+			<artifactId>aws-java-sdk-s3</artifactId>
+			<version>1.12.656</version> <!-- Use latest -->
+		</dependency>
+
+Then do confiuration : 
+
+application.propertise
+-------------------------
+# AWS Credentials
+cloud.aws.region.static=ap-south-1
+cloud.aws.credentials.access-key= aws-access-key
+cloud.aws.credentials.secret-key=asw-secret-key
+
+# S3 Bucket Details
+aws.s3.bucket.name=my-hms-photos // s3 bucket name 
+
+(c). create AmazonS3Config class inside config package to login the aws account 
+
+AmazonS3Config
+------------------
+package com.propertyMicroservice.config;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+ 
+@Configuration
+public class AmazonS3Config {
+	
+	@Value("${cloud.aws.region.static}")
+    private String region;
+
+    @Value("${cloud.aws.credentials.access-key}")
+    private String accessKey;
+
+    @Value("${cloud.aws.credentials.secret-key}")
+    private String secretKey;
+
+    @Bean
+    public AmazonS3 amazonS3() {
+        BasicAWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
+        return AmazonS3ClientBuilder.standard()
+                .withRegion(region)
+                .withCredentials(new AWSStaticCredentialsProvider(credentials))
+                .build();
+    }
+}
+
+(d). After create S3Service for 
+
+S3Service.class
+-----------------
+
+package com.propertyMicroservice.service;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+
+@Service
+  public class S3Service {	
+	
+	@Autowired
+    private AmazonS3 amazonS3;
+
+    @Value("${aws.s3.bucket.name}")
+    private String bucketName;
+
+    public List<String> uploadFiles(MultipartFile[] files) {
+        List<String> urls = new ArrayList<>();
+        for (MultipartFile file : files) {
+            String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+            try {
+                ObjectMetadata metadata = new ObjectMetadata();
+                metadata.setContentLength(file.getSize());
+                amazonS3.putObject(bucketName, fileName, file.getInputStream(), metadata);
+                urls.add(amazonS3.getUrl(bucketName, fileName).toString());
+            } catch (IOException e) {
+                throw new RuntimeException("Error uploading file to S3", e);
+            }
+        }
+        return urls;
+    } 
+  }
+ 
+(e). Now modify the PropertyService to store the photos in s3 service 
+
+PropertyService.class
+------------------------
+package com.propertyMicroservice.service;
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import com.propertyMicroservice.dto.PropertyDto;
+import com.propertyMicroservice.dto.RoomsDto;
+import com.propertyMicroservice.entity.Area;
+import com.propertyMicroservice.entity.City;
+import com.propertyMicroservice.entity.Property;
+import com.propertyMicroservice.entity.PropertyPhotos;
+import com.propertyMicroservice.entity.Rooms;
+import com.propertyMicroservice.entity.State;
+import com.propertyMicroservice.repository.AreaRepository;
+import com.propertyMicroservice.repository.CityRepository;
+import com.propertyMicroservice.repository.PropertyPhotosRepository;
+import com.propertyMicroservice.repository.PropertyRepository;
+import com.propertyMicroservice.repository.RoomAvailabilityRepository;
+import com.propertyMicroservice.repository.RoomRepository;
+import com.propertyMicroservice.repository.StateRepository;
 
 
+@Service
+public class PropertyService {
+	  
+	@Autowired
+    private PropertyRepository propertyRepository;
+    @Autowired
+    private AreaRepository areaRepository;
+    @Autowired
+    private CityRepository cityRepository;
+    @Autowired
+    private StateRepository stateRepository;
+    @Autowired
+    private RoomRepository roomRepository;
+    @Autowired
+    private PropertyPhotosRepository propertyPhotosRepository;
+    @Autowired
+    private RoomAvailabilityRepository availabilityRepository;
+
+    @Autowired // modified for s3
+    private S3Service s3Service;
+
+    public Property addProperty(PropertyDto dto, MultipartFile[] files) {
+
+       String cityName = dto.getCity();
+       City city = cityRepository.findByName(cityName);
+       
+       String areaName = dto.getArea();
+       Area area = areaRepository.findByName(areaName);
+       
+       String stateName = dto.getState();
+       State state = stateRepository.findByName(stateName);
+       
+       Property property = new Property();
+	    property.setName(dto.getName());
+	    property.setNumberOfBathrooms(dto.getNumberOfBathrooms());
+	    property.setNumberOfBeds(dto.getNumberOfBeds());
+	    property.setNumberOfRooms(dto.getNumberOfRooms());
+	    property.setNumberOfGuestAllowed(dto.getNumberOfGuestAllowed());
+	    property.setArea(area);
+	    property.setCity(city);
+	    property.setState(state);
+	    
+	    Property savedProperty = propertyRepository.save(property);     
+
+        for (RoomsDto roomsDto : dto.getRooms()) {
+            Rooms rooms = new Rooms();
+            rooms.setProperty(savedProperty);
+            rooms.setRoomType(roomsDto.getRoomType());
+            rooms.setBasePrice(roomsDto.getBasePrice());
+                  
+            roomRepository.save(rooms);
+        }     
+
+     // upload files to s3 (modified) 
+
+        List<String> fileUrls = s3Service.uploadFiles(files);
+
+        for (String url :fileUrls) {
+            PropertyPhotos photo = new PropertyPhotos();
+            photo.setUrl(url);
+            photo.setProperty(savedProperty);
+            propertyPhotosRepository.save(photo);
+        }
+   
+        return savedProperty;
+    }
+}
+
+Note : Post : http://localhost:9091/api/v1/property/add-property , Now go to postman and select body give key , json formate data and choose file and upload photo
+
+3️⃣ Quick fix for Postman
+
+Set Body → form-data
+
+Key: property, Type: Text and Value: Paste your full JSON (no extra quotes, no line breaks issues)
+
+Key: files, Type: File → choose your images
+
+This almost always solves the "Invalid property JSON format" issue.
+
+{
+  "name": "Hotel Sunshine",
+  "numberOfBeds": 4,
+  "numberOfRooms": 2,
+  "numberOfBathrooms": 2,
+  "numberOfGuestAllowed": 6,
+  "city": "bengaluru",       
+  "area": "BTM",
+  "state": "karnatka",
+  "rooms": [
+    {
+      "roomType": "Deluxe",
+      "basePrice": 2500
+    },
+    {
+      "roomType": "Suite",
+      "basePrice": 4500
+    }
+  ]
+}
+
+now go to db and s3 service , you will get photo .
+
+Step 10 : Now work on sms integration using kafka , for this add kafka dependency in pom.xml file 
+
+(a) : pom.xml
+-----------------------
+<!-- Kafka -->
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka</artifactId>
+	    </dependency>
+
+(b) perform configuration for kafka for sms integration 
+
+application.propertise
+------------------------------
+spring.kafka.bootstrap-servers=localhost:9092
+spring.kafka.consumer.group-id=notification-group
+spring.kafka.consumer.auto-offset-reset=earliest
+spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
+spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
+spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+spring.kafka.consumer.value-deserializer=org.springframework.kafka.support.serializer.JsonDeserializer
+spring.kafka.consumer.properties.spring.json.trusted.packages=*
+
+(c) After , create seperate EmailProducer class indie service package for sms integration 
+
+EmailProducer.class
+---------------------
+package com.propertyMicroservice.service;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
+import com.propertyMicroservice.dto.EmailRequest;
+
+@Service
+public class EmailProducer {
+
+	@Autowired
+	private KafkaTemplate<String, EmailRequest> kafkaTemplate;
+
+	private static final String TOPIC = "send_email";
+
+	public void sendEmail(EmailRequest request) {
+		kafkaTemplate.send(TOPIC, request);
+	}
+}
+
+(d) After , create EmailRequest class inside DTO package 
+
+EmailRequest .class
+--------------
+package com.propertyMicroservice.dto;
+
+public class EmailRequest {
+	
+	// This complete data go to broker
+	
+	private String to;
+    private String subject;
+    private String body;
+      
+    
+	public EmailRequest(String to, String subject, String body) {
+		this.to = to;
+		this.subject = subject;
+		this.body = body;
+	}
+	public String getTo() {
+		return to;
+	}
+	public String getSubject() {
+		return subject;
+	}
+	public String getBody() {
+		return body;
+	}
+	public void setTo(String to) {
+		this.to = to;
+	}
+	public void setSubject(String subject) {
+		this.subject = subject;
+	}
+	public void setBody(String body) {
+		this.body = body;
+	}
+}
+
+(e). Now modify the PropertyService class inside service package
+
+PropertyService
+-------------------
+package com.propertyMicroservice.service;
+
+import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+import com.propertyMicroservice.dto.EmailRequest;
+import com.propertyMicroservice.dto.PropertyDto;
+import com.propertyMicroservice.dto.RoomsDto;
+import com.propertyMicroservice.entity.Area;
+import com.propertyMicroservice.entity.City;
+import com.propertyMicroservice.entity.Property;
+import com.propertyMicroservice.entity.PropertyPhotos;
+import com.propertyMicroservice.entity.Rooms;
+import com.propertyMicroservice.entity.State;
+import com.propertyMicroservice.repository.AreaRepository;
+import com.propertyMicroservice.repository.CityRepository;
+import com.propertyMicroservice.repository.PropertyPhotosRepository;
+import com.propertyMicroservice.repository.PropertyRepository;
+import com.propertyMicroservice.repository.RoomAvailabilityRepository;
+import com.propertyMicroservice.repository.RoomRepository;
+import com.propertyMicroservice.repository.StateRepository;
 
 
+@Service
+public class PropertyService {
+	  
+	@Autowired
+    private PropertyRepository propertyRepository;
+    @Autowired
+    private AreaRepository areaRepository;
+    @Autowired
+    private CityRepository cityRepository;
+    @Autowired
+    private StateRepository stateRepository;
+    @Autowired
+    private RoomRepository roomRepository;
+    @Autowired
+    private PropertyPhotosRepository propertyPhotosRepository;
+    @Autowired
+    private RoomAvailabilityRepository availabilityRepository;
+    @Autowired
+    private S3Service s3Service;
+    
+    private EmailProducer emailProducer; // modify
+	@Autowired
 
+    public Property addProperty(PropertyDto dto, MultipartFile[] files) {
 
+       String cityName = dto.getCity();
+       City city = cityRepository.findByName(cityName);
+       
+       String areaName = dto.getArea();
+       Area area = areaRepository.findByName(areaName);
+       
+       String stateName = dto.getState();
+       State state = stateRepository.findByName(stateName);
+       
+       Property property = new Property();
+	    property.setName(dto.getName());
+	    property.setNumberOfBathrooms(dto.getNumberOfBathrooms());
+	    property.setNumberOfBeds(dto.getNumberOfBeds());
+	    property.setNumberOfRooms(dto.getNumberOfRooms());
+	    property.setNumberOfGuestAllowed(dto.getNumberOfGuestAllowed());
+	    property.setArea(area);
+	    property.setCity(city);
+	    property.setState(state);
+	    
+	    Property savedProperty = propertyRepository.save(property);
+	    
+        for (RoomsDto roomsDto : dto.getRooms()) {
+            Rooms rooms = new Rooms();
+            rooms.setProperty(savedProperty);
+            rooms.setRoomType(roomsDto.getRoomType());
+            rooms.setBasePrice(roomsDto.getBasePrice());
+                  
+            roomRepository.save(rooms);
+        }
+        
+     // upload files to s3  
+        List<String> fileUrls = s3Service.uploadFiles(files);
 
+        for (String url :fileUrls) {
+            PropertyPhotos photo = new PropertyPhotos();
+            photo.setUrl(url);
+            photo.setProperty(savedProperty);
+            propertyPhotosRepository.save(photo);
+        }
+        
+        // Email SMS Integration added
+        emailProducer.sendEmail(new EmailRequest(         // modify for smsintegration 
+	    	    "pankaj.p.mutha14@gmail.com",
+	    	    "Property added!",
+	    	    "Your property has been successfully added."
+	    	));
 
+     
+        return savedProperty;
+    }
 
+-----------------------
+Create a new project for email sms integration 
+---------------------
+(a) Create a new project and add these dependency :
+(1). spring web
 
+(2). Java Mail Sender
 
+(3) kafka 
+<!-- Kafka -->
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka</artifactId>
+	    </dependency>
 
+(b) setup the configuration in application.propertise file 
 
+spring.application.name=notification-service
+
+server.port=9093
+
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=your-email@gmail.com
+spring.mail.password=your-app-password
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+
+(c) Now crate a EmailConsumer class inside consumer package 
+
+EmailConsumer
+----------------
+package com.notificationService.consumer;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.stereotype.Service;
+import com.notificationService.dto.EmailRequest;
+
+@Service
+public class EmailConsumer {
+	
+	 @Autowired
+	    private JavaMailSender mailSender;
+
+	    @KafkaListener(topics = "send_email", groupId = "notification-group")
+	    public void consume(EmailRequest request) {
+	        SimpleMailMessage message = new SimpleMailMessage();
+	        message.setTo(request.getTo());
+	        message.setSubject(request.getSubject());
+	        message.setText(request.getBody());
+
+	        mailSender.send(message);
+	    }
+}
+
+(d) Now create EmailRequest class inside DTO package
+
+EmailRequest
+--------------
+package com.notificationService.dto;
+
+public class EmailRequest {
+	
+	 private String to;
+	 private String subject;
+	    
+	 private String body;
+	    	    
+		public EmailRequest(String to, String subject, String body) {
+			this.to = to;
+			this.subject = subject;
+			this.body = body;
+		}
+		public String getTo() {
+			return to;
+		}
+		public String getSubject() {
+			return subject;
+		}
+		public String getBody() {
+			return body;
+		}
+		public void setTo(String to) {
+			this.to = to;
+		}
+		public void setSubject(String subject) {
+			this.subject = subject;
+		}
+		public void setBody(String body) {
+			this.body = body;
+		}
+}
+
+Note : 
+now open gmail and click on manage emial and go to security option and type two step verification and Enable two step verification 
+in gmail and after that search App password in search box and click on that and give App name whichever you want and click on create ,
+after you will get one password , copy the password and past in application.propertise file of notification-service project for email notification.
+
+application.propertise in notification-service project 
+----------------------------
+spring.application.name=notification-service
+
+server.port=9093
+
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=ajaysahni854301@gmail.com
+spring.mail.password=iofa wisb rpvq nyfm  // App password 
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
 
 
 

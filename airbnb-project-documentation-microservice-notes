@@ -1857,88 +1857,50 @@ Step 10 : Now work on sms integration using kafka , for this add kafka dependenc
 
 application.propertise
 ------------------------------
-spring.kafka.bootstrap-servers=localhost:9092
-spring.kafka.consumer.group-id=notification-group
-spring.kafka.consumer.auto-offset-reset=earliest
-spring.kafka.producer.key-serializer=org.apache.kafka.common.serialization.StringSerializer
-spring.kafka.producer.value-serializer=org.springframework.kafka.support.serializer.JsonSerializer
-spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
-spring.kafka.consumer.value-deserializer=org.springframework.kafka.support.serializer.JsonDeserializer
-spring.kafka.consumer.properties.spring.json.trusted.packages=*
+spring.application.name=property-microservice-3
 
-(c) After , create seperate EmailProducer class indie service package for sms integration 
+server.port = 9091
+# ================================
+# DATABASE CONFIGURATION
+# ================================
+spring.datasource.url=jdbc:mysql://localhost:3306/propertyservicedb
+spring.datasource.username=root
+spring.datasource.password=Ajay@123
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
 
-EmailProducer.class
----------------------
-package com.propertyMicroservice.service;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.stereotype.Service;
-import com.propertyMicroservice.dto.EmailRequest;
+# ================================
+# JPA / HIBERNATE CONFIGURATION
+# ================================
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+spring.jpa.properties.hibernate.format_sql=true
+spring.jpa.database-platform=org.hibernate.dialect.MySQLDialect
 
-@Service
-public class EmailProducer {
 
-	@Autowired
-	private KafkaTemplate<String, EmailRequest> kafkaTemplate;
+# AWS Credentials
+cloud.aws.region.static=ap-south-1
+cloud.aws.credentials.access-key=AKIAS252WBTTGZ23A44N
+cloud.aws.credentials.secret-key=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
 
-	private static final String TOPIC = "send_email";
+# S3 Bucket Details
+aws.s3.bucket.name=my-hms-photos
 
-	public void sendEmail(EmailRequest request) {
-		kafkaTemplate.send(TOPIC, request);
-	}
-}
+# kafka 
+spring.kafka.bootstrap-servers=ec2-35-154-211-81.ap-south-1.compute.amazonaws.com:9092 // DNS URL FROM AWS EC2
 
-(d) After , create EmailRequest class inside DTO package 
 
-EmailRequest .class
---------------
-package com.propertyMicroservice.dto;
+(c) After modify the propertiseService
 
-public class EmailRequest {
-	
-	// This complete data go to broker
-	
-	private String to;
-    private String subject;
-    private String body;
-      
-    
-	public EmailRequest(String to, String subject, String body) {
-		this.to = to;
-		this.subject = subject;
-		this.body = body;
-	}
-	public String getTo() {
-		return to;
-	}
-	public String getSubject() {
-		return subject;
-	}
-	public String getBody() {
-		return body;
-	}
-	public void setTo(String to) {
-		this.to = to;
-	}
-	public void setSubject(String subject) {
-		this.subject = subject;
-	}
-	public void setBody(String body) {
-		this.body = body;
-	}
-}
-
-(e). Now modify the PropertyService class inside service package
-
-PropertyService
--------------------
 package com.propertyMicroservice.service;
 
 import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.propertyMicroservice.constants.AppConstants;
 import com.propertyMicroservice.dto.EmailRequest;
 import com.propertyMicroservice.dto.PropertyDto;
 import com.propertyMicroservice.dto.RoomsDto;
@@ -1977,8 +1939,10 @@ public class PropertyService {
     @Autowired
     private S3Service s3Service;
     
-    private EmailProducer emailProducer; // modify
-	@Autowired
+    @Autowired
+	private KafkaTemplate<String, EmailRequest> kafkaTemplate;
+    
+	
 
     public Property addProperty(PropertyDto dto, MultipartFile[] files) {
 
@@ -2003,6 +1967,8 @@ public class PropertyService {
 	    
 	    Property savedProperty = propertyRepository.save(property);
 	    
+       
+
         for (RoomsDto roomsDto : dto.getRooms()) {
             Rooms rooms = new Rooms();
             rooms.setProperty(savedProperty);
@@ -2012,6 +1978,13 @@ public class PropertyService {
             roomRepository.save(rooms);
         }
         
+     // sends msg to kafka topic
+        
+        EmailRequest emailRequest = new EmailRequest("ajaysahni854301@gmail.com","Property Added","Your property details are not live");
+     		kafkaTemplate.send(AppConstants.TOPIC, emailRequest);
+        
+       
+
      // upload files to s3  
         List<String> fileUrls = s3Service.uploadFiles(files);
 
@@ -2021,20 +1994,112 @@ public class PropertyService {
             photo.setProperty(savedProperty);
             propertyPhotosRepository.save(photo);
         }
-        
-        // Email SMS Integration added
-        emailProducer.sendEmail(new EmailRequest(         // modify for smsintegration 
-	    	    "pankaj.p.mutha14@gmail.com",
-	    	    "Property added!",
-	    	    "Your property has been successfully added."
-	    	));
 
      
         return savedProperty;
     }
 
+(d) Now create EmailRequest class inside DTO (propertise-service project)
+
+package com.propertyMicroservice.dto;
+
+public class EmailRequest {
+	
+	// This complete data go to broker
+	
+	private String to;
+    private String subject;
+    private String body;
+    
+    
+    
+	public EmailRequest(String to, String subject, String body) {
+		this.to = to;
+		this.subject = subject;
+		this.body = body;
+	}
+	public String getTo() {
+		return to;
+	}
+	public String getSubject() {
+		return subject;
+	}
+	public String getBody() {
+		return body;
+	}
+	public void setTo(String to) {
+		this.to = to;
+	}
+	public void setSubject(String subject) {
+		this.subject = subject;
+	}
+	public void setBody(String body) {
+		this.body = body;
+	}
+	
+	@Override
+	public String toString() {
+		return "EmailRequest [to=" + to + ", subject=" + subject + ", body=" + body + "]";
+	}
+
+}
+
+(e). Now create a AppConstant class inside constant package 
+
+package com.propertyMicroservice.constants;
+
+public class AppConstants {
+	
+	public static final String TOPIC = "send_email";
+	public static final String KAFKA_HOST = "ec2-35-154-211-81.ap-south-1.compute.amazonaws.com:9092"; // DNS URL from ec2 
+
+}
+
+(f). Now create KafkaProduceConfiguration inside config package in property-service project 
+
+package com.propertyMicroservice.config;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.core.ProducerFactory;
+import org.springframework.kafka.support.serializer.JsonSerializer;
+
+import com.propertyMicroservice.constants.AppConstants;
+import com.propertyMicroservice.dto.EmailRequest;
+
+@Configuration
+public class KafkaProduceConfiguration {
+	
+	@Bean
+	public ProducerFactory<String, EmailRequest> producerFactory() {
+
+		Map<String, Object> kafkaProps = new HashMap<>();
+
+		kafkaProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, AppConstants.KAFKA_HOST);
+		kafkaProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+		kafkaProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+
+		return new DefaultKafkaProducerFactory<>(kafkaProps);
+	}
+
+	@Bean
+	public KafkaTemplate<String, EmailRequest> kafkaTemplate() {
+		return new KafkaTemplate<>(producerFactory());
+	}
+
+}
+
+
+====================================================================================================================================
 -----------------------
-Create a new project for email sms integration 
+Create a new project(notification-service) for email sms integration 
 ---------------------
 (a) Create a new project and add these dependency :
 (1). spring web
@@ -2050,48 +2115,132 @@ Create a new project for email sms integration
 
 (b) setup the configuration in application.propertise file 
 
+# App
 spring.application.name=notification-service
+server.port=9094
 
-server.port=9093
-
+# MAIL CONFIG
 spring.mail.host=smtp.gmail.com
 spring.mail.port=587
-spring.mail.username=your-email@gmail.com
-spring.mail.password=your-app-password
+spring.mail.username=ajaysahni854301@gmail.com
+spring.mail.password=iofa wisb rpvq nyfm
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 
-(c) Now crate a EmailConsumer class inside consumer package 
+# kafka 
+spring.kafka.bootstrap-servers=ec2-35-154-211-81.ap-south-1.compute.amazonaws.com:9092
 
-EmailConsumer
-----------------
-package com.notificationService.consumer;
+(c) now create AppConstants class inside (appconstant package) 
+
+AppConstants
+-----------------
+package com.notificationService.appconstants;
+
+public class AppConstants {
+	
+	public static final String TOPIC = "send_email";
+	public static final String KAFKA_HOST = "ec2-35-154-211-81.ap-south-1.compute.amazonaws.com:9092";
+
+}
+
+
+(d) Now crate a KafkaConsumerConfig class inside config package (notification-service project )
+
+KafkaConsumerConfig
+----------------------
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.kafka.clients.consumer.ConsumerConfig;
+import org.apache.kafka.common.serialization.StringDeserializer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
+import org.springframework.kafka.support.serializer.JsonDeserializer;
+
+import com.notificationService.appconstants.AppConstants;
+import com.notificationService.dto.EmailRequest;
+
+@Configuration
+public class KafkaConsumerConfig {
+	
+	@Bean
+	public ConsumerFactory<String, EmailRequest> consumerFactory() {
+
+		Map<String, Object> kafkaConfigProps = new HashMap<String, Object>();
+
+		kafkaConfigProps .put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, AppConstants.KAFKA_HOST);
+		kafkaConfigProps .put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+		kafkaConfigProps .put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+
+		return new DefaultKafkaConsumerFactory<>(kafkaConfigProps, new StringDeserializer(), new JsonDeserializer<>());
+
+	}
+
+	@Bean
+	public ConcurrentKafkaListenerContainerFactory<String, EmailRequest> kafkaListnerFactory() {
+
+		ConcurrentKafkaListenerContainerFactory<String, EmailRequest> factory = 
+				new ConcurrentKafkaListenerContainerFactory<>();
+
+		factory.setConsumerFactory(consumerFactory());
+
+		return factory;
+	}
+
+}
+
+
+(e) now create EmailRequestListner inside service package
+
+EmailRequestListner
+--------------------------
+
+package com.notificationService.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.notificationService.appconstants.AppConstants;
 import com.notificationService.dto.EmailRequest;
 
 @Service
-public class EmailConsumer {
+public class EmailRequestListner { 
 	
-	 @Autowired
-	    private JavaMailSender mailSender;
+	@Autowired
+	private JavaMailSender javaMailSender;
+    
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-	    @KafkaListener(topics = "send_email", groupId = "notification-group")
-	    public void consume(EmailRequest request) {
-	        SimpleMailMessage message = new SimpleMailMessage();
-	        message.setTo(request.getTo());
-	        message.setSubject(request.getSubject());
-	        message.setText(request.getBody());
+    @KafkaListener(topics = AppConstants.TOPIC, groupId = "group_email")
+    public void kafkaSubscriberContent(String emailRequest) {
+        try {
+            EmailRequest emailContent = objectMapper.readValue(emailRequest, EmailRequest.class);
+            SimpleMailMessage sm = new SimpleMailMessage();
+            sm.setTo(emailContent.getTo());
+            sm.setSubject(emailContent.getSubject());
+            sm.setText(emailContent.getBody());
+            javaMailSender.send(sm);
+            
 
-	        mailSender.send(message);
-	    }
+        } catch (JsonMappingException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 }
 
-(d) Now create EmailRequest class inside DTO package
+
+(f). Now create EmailRequest class inside DTO package
 
 EmailRequest
 --------------

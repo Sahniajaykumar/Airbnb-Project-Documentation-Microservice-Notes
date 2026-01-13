@@ -652,7 +652,7 @@ spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.MySQL8Dialect
 Step 3. Follow the package structure and build Entity, controller, service, repository, configuration, payload(dto) package
 ------------------------------------------------------------------------------------------------------------------------------
 
-Step 4.(a) Building Login Features to Permit All Requests Publicly Using Spring Security
+Step 4.(a) Keeps all URLs Open using spring security .
 ###############################################################################################################################
 
 Example 1:
